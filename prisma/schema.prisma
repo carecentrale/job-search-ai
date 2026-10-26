@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  clerkId           String   @unique
+  email             String   @unique
+  name              String?
+  profileImageUrl   String?
+  uploadedCv        String?  // Store CV text/content
+  trialEndsAt       DateTime?
+  subscriptionStatus String   @default("trial") // trial, active, expired, cancelled
+  stripeCustomerId  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  materials Material[]
+  preferences UserPreferences?
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+model UserPreferences {
+  id          String @id @default(cuid())
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  preferredTemplate String @default("minimal") // minimal, bold, elegant
+  preferredColors   String? // JSON string of color preferences
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Material {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  jobTitle              String
+  jobDescription        String   @db.Text
+  roleCategory          String   // PM, Engineering, Finance, etc.
+  companySeniority      String?
+
+  generatedCv           String   @db.Text
+  generatedCoverLetter  String   @db.Text
+  templateUsed          String   @default("minimal")
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DesignTemplate {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  displayName         String
+  description         String   @db.Text
+
+  // JSON string of CSS variables
+  defaultColors       String   // { "primary": "#...", "secondary": "..." }
+  defaultFonts        String?  // { "heading": "...", "body": "..." }
+  defaultSpacing      String?  // { "sm": "...", "md": "...", "lg": "..." }
+
+  previewImageUrl     String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model StripeEvent {
+  id          String   @id @default(cuid())
+  stripeId    String   @unique
+  type        String
+  data        String   @db.Text // JSON string of event data
+  processed   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([stripeId])
+  @@index([processed])
+}
