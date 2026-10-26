@@ -1,67 +1,75 @@
-const steps = [
+const work = [
   {
-    title: "Add your CV",
-    body: "Upload the PDF you already have, or paste the text. We read your roles, results and skills once and keep them on file.",
+    verb: "Brief",
+    title: "Tell it what you want next",
+    body: "Share your CV and a few lines on the role, pay, places and companies you want. Like a first meeting with a recruiter, minus the small talk.",
   },
   {
-    title: "Paste a job posting",
-    body: "Copy the full posting from LinkedIn, Indeed or a company careers page. We pick out what the employer is asking for.",
+    verb: "Hunt",
+    title: "It goes looking",
+    body: "Every day it scans new postings and shortlists the ones that fit your brief, with a plain reason for each pick and a warning on stale or vague ones.",
   },
   {
-    title: "Download your application",
-    body: "Get a CV and cover letter rewritten for that posting, using only experience you actually have. Edit anything before you send it.",
+    verb: "Tailor",
+    title: "It prepares each application",
+    body: "For every role you approve, it rewrites your CV and cover letter to answer what that employer asked for. Only from experience you actually have.",
+  },
+  {
+    verb: "Follow up",
+    title: "It keeps your search moving",
+    body: "It tracks where every application stands and nudges you when it is time to follow up, prepare for an interview, or move on.",
   },
 ];
 
 const templates = [
-  { id: "minimal", name: "Minimal", note: "Plain and quiet. Good for any industry." },
-  { id: "bold", name: "Bold", note: "A dark header band and strong headings. Good for product and tech roles." },
-  { id: "elegant", name: "Elegant", note: "Serif type and generous margins. Good for senior and executive roles." },
+  { id: "minimal", name: "Minimal", note: "Quiet and clean. Fits any industry." },
+  { id: "bold", name: "Bold", note: "A strong header band. Fits product and tech roles." },
+  { id: "elegant", name: "Elegant", note: "Serif type, wide margins. Fits senior and executive roles." },
 ];
 
 const plans = [
   {
-    name: "Free trial",
+    name: "Trial",
     price: "$0",
     period: "for 7 days",
-    features: ["5 tailored applications", "All 3 templates", "PDF download"],
-    cta: "Start free trial",
+    features: ["Your brief and daily shortlist", "5 tailored applications", "All 3 CV templates"],
+    cta: "Start your free week",
     featured: false,
   },
   {
-    name: "Pro",
+    name: "Personal",
     price: "$29",
     period: "per month",
-    features: ["Unlimited applications", "Match a CV style from a sample", "Application tracker"],
-    cta: "Choose Pro",
+    features: ["Unlimited tailored applications", "Match the style of any CV you like", "Application tracker and follow-up reminders"],
+    cta: "Hire your headhunter",
     featured: true,
   },
   {
-    name: "Team",
+    name: "Coach",
     price: "$99",
     period: "per month",
-    features: ["Up to 5 job seekers", "Shared templates", "For coaches and outplacement"],
-    cta: "Choose Team",
+    features: ["Up to 5 job seekers", "Shared templates", "Built for career coaches and outplacement"],
+    cta: "Set up for clients",
     featured: false,
   },
 ];
 
 const faqs = [
   {
+    q: "Does it apply to jobs for me?",
+    a: "No. It finds the roles and prepares everything, then you review and press send. Nothing goes out in your name without you.",
+  },
+  {
     q: "Will it make things up about me?",
-    a: "No. Every line in your tailored CV comes from your own CV. We reorder, reword and emphasise what matches the posting. If the posting asks for something you don't have, we tell you instead of inventing it.",
+    a: "No. Every line it writes comes from your own CV and brief. If a posting asks for something you don't have, it tells you instead of inventing it.",
   },
   {
     q: "What happens after the 7 days?",
-    a: "Your trial ends and nothing is charged unless you choose a plan. Everything you created stays in your account to download.",
-  },
-  {
-    q: "Can I edit what it writes?",
-    a: "Yes. Every CV and cover letter opens in an editor before you download it.",
+    a: "Your trial ends and nothing is charged unless you choose a plan. Everything it prepared stays in your account to download.",
   },
   {
     q: "Who can see my CV?",
-    a: "Only you. Your documents are private to your account, and you can delete them at any time.",
+    a: "Only you. Your documents are private to your account and you can delete them at any time.",
   },
 ];
 
@@ -72,66 +80,92 @@ export default function Home() {
         <div className="wrap nav-inner">
           <a className="wordmark" href="#top">Job Search AI</a>
           <nav aria-label="Main">
-            <a href="#how">How it works</a>
+            <a href="#how">What it does</a>
             <a href="#templates">Templates</a>
             <a href="#pricing">Pricing</a>
           </nav>
-          <a className="btn btn-small" href="#pricing">Start free trial</a>
+          <a className="btn btn-small" href="#pricing">Start free</a>
         </div>
       </header>
 
       <main id="top">
-        <section className="hero wrap">
+        <section className="hero-band">
+          <div className="hero wrap">
           <div className="hero-copy">
-            <h1>Paste a job posting. Get a CV written for it.</h1>
+            <h1>Get to work with your personal headhunter.</h1>
             <p className="lede">
-              An AI agent reads what the employer is asking for, then rewrites your CV and
-              cover letter to answer it. Using only experience you actually have.
+              Brief it once. It finds the roles worth your time, tailors your CV and cover letter
+              for each one, and keeps your search moving while you get on with your day.
             </p>
             <div className="hero-actions">
-              <a className="btn" href="#pricing">Start your 7-day free trial</a>
-              <a className="link" href="#how">See how it works</a>
+              <a className="btn" href="#pricing">Start your free week</a>
+              <a className="link" href="#how">See what it does</a>
             </div>
-            <p className="fine">No card needed to start.</p>
+            <p className="fine">7 days free. No card needed.</p>
           </div>
 
-          <div className="demo" aria-label="Example: a job posting and the CV tailored to it">
-            <article className="sheet posting">
-              <p className="sheet-label">The posting</p>
-              <h2 className="sheet-title">Senior Product Manager, Payments</h2>
-              <p className="sheet-meta">Northwind Bank, Toronto (hybrid)</p>
-              <p>
-                You will own our merchant onboarding roadmap. We are looking for someone with{" "}
-                <mark data-k="1">5+ years leading payments products</mark>, experience working
-                with <mark data-k="2">sponsor banks and card networks</mark>, and a track record
-                of <mark data-k="3">shipping with multiple engineering teams</mark>.
-              </p>
-              <p>French is an asset.</p>
-            </article>
+          <aside className="briefing" aria-label="Example of a morning briefing from your headhunter">
+            <div className="briefing-head">
+              <span className="avatar" aria-hidden="true">JS</span>
+              <div>
+                <p className="briefing-from">Your headhunter</p>
+                <p className="briefing-time">Tuesday, 7:30 am</p>
+              </div>
+            </div>
+            <p className="briefing-hello">Morning, Alex. Here is what I did overnight.</p>
 
-            <article className="sheet cv">
-              <p className="sheet-label">Your tailored CV</p>
-              <h2 className="sheet-title">Alex Morgan</h2>
-              <p className="sheet-meta">Product Manager, Payments</p>
-              <ul>
-                <li><span className="tag">1</span>7 years running payments products, most recently a 1,200-merchant portfolio</li>
-                <li><span className="tag">2</span>Managed sponsor bank and Visa/Mastercard relationships for card acquiring</li>
-                <li><span className="tag">3</span>Set the roadmap for 4 scrum teams through a platform migration</li>
-                <li><span className="tag">+</span>Bilingual, English and French</li>
-              </ul>
-            </article>
+            <div className="briefing-stats">
+              <p><strong>38</strong> new postings read</p>
+              <p><strong>3</strong> worth your time</p>
+            </div>
+
+            <ul className="shortlist">
+              <li>
+                <div className="fit"><span>92</span>fit</div>
+                <div>
+                  <p className="role">Senior Product Manager, Payments</p>
+                  <p className="why">Northwind Bank, Toronto. Asks for sponsor bank work you led for 4 years.</p>
+                </div>
+                <span className="status status-ready">CV ready</span>
+              </li>
+              <li>
+                <div className="fit"><span>84</span>fit</div>
+                <div>
+                  <p className="role">Group PM, Merchant Platform</p>
+                  <p className="why">Harbourline, remote. Your migration work matches their roadmap.</p>
+                </div>
+                <span className="status">Drafting</span>
+              </li>
+              <li>
+                <div className="fit fit-warn"><span>71</span>fit</div>
+                <div>
+                  <p className="role">Director of Product, Fintech</p>
+                  <p className="why">Posted 46 days ago. Might already be filled, worth a quick check.</p>
+                </div>
+                <span className="status status-warn">Check first</span>
+              </li>
+            </ul>
+
+            <div className="briefing-foot">
+              <span>Follow up with Clearwater today. It has been 8 days.</span>
+              <a className="btn btn-small" href="#how">Review and send</a>
+            </div>
+          </aside>
           </div>
         </section>
 
         <section id="how" className="band">
           <div className="wrap">
-            <h2 className="section-title">How it works</h2>
-            <ol className="steps">
-              {steps.map((s, i) => (
-                <li key={s.title}>
-                  <span className="step-n">{i + 1}</span>
-                  <h3>{s.title}</h3>
-                  <p>{s.body}</p>
+            <div className="section-head">
+              <h2 className="section-title">A headhunter that works for you, not the employer</h2>
+              <p>Recruiters are paid to fill the company&apos;s role. This one is paid by you to find yours.</p>
+            </div>
+            <ol className="work">
+              {work.map((w) => (
+                <li key={w.verb}>
+                  <span className="verb">{w.verb}</span>
+                  <h3>{w.title}</h3>
+                  <p>{w.body}</p>
                 </li>
               ))}
             </ol>
@@ -140,10 +174,10 @@ export default function Home() {
 
         <section id="templates" className="wrap section">
           <div className="section-head">
-            <h2 className="section-title">Three templates to start</h2>
+            <h2 className="section-title">Your CV, dressed for the room</h2>
             <p>
-              Pick one per application. On Pro, upload a CV you like the look of and we will
-              match its layout, fonts and colours.
+              Start with one of three templates. Or show it a CV whose look you like, and it will
+              match the layout, fonts and colours.
             </p>
           </div>
           <div className="templates">
@@ -152,7 +186,6 @@ export default function Home() {
                 <div className={`thumb thumb-${t.id}`} aria-hidden="true">
                   <div className="t-head"><span className="t-name" /><span className="t-line short" /></div>
                   <div className="t-body">
-                    <span className="t-h" /><span className="t-line" /><span className="t-line" /><span className="t-line short" />
                     <span className="t-h" /><span className="t-line" /><span className="t-line" /><span className="t-line short" />
                     <span className="t-h" /><span className="t-line" /><span className="t-line" /><span className="t-line short" />
                     <span className="t-h" /><span className="t-line" /><span className="t-line short" />
@@ -169,7 +202,10 @@ export default function Home() {
 
         <section id="pricing" className="band">
           <div className="wrap">
-            <h2 className="section-title">Pricing</h2>
+            <div className="section-head">
+              <h2 className="section-title">Cheaper than one lunch with a recruiter</h2>
+              <p>Try it for a week. Keep it only if it earns its place in your search.</p>
+            </div>
             <div className="plans">
               {plans.map((p) => (
                 <div key={p.name} className={`plan${p.featured ? " plan-featured" : ""}`}>
@@ -186,7 +222,7 @@ export default function Home() {
         </section>
 
         <section className="wrap section faq">
-          <h2 className="section-title">Questions</h2>
+          <h2 className="section-title">Before you hire it</h2>
           {faqs.map((f) => (
             <details key={f.q}>
               <summary>{f.q}</summary>
