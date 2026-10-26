@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "fuzzyHR",
   description:
-    "Paste a job posting and get a CV and cover letter rewritten for it. Free for 7 days.",
+    "Your personal headhunter. fuzzyHR finds the roles worth your time, tailors your CV and cover letter for each, and keeps your search moving.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

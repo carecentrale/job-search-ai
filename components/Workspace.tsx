@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { nudgesFor } from "@/lib/hunt/followup";
 import { sampleApplications, sampleBrief, sampleJobs } from "@/lib/hunt/sample";
@@ -42,10 +43,10 @@ function ago(iso: string) {
 
 export default function Workspace() {
   const [tab, setTab] = useState<Tab>("today");
-  const [state, setState] = useState<State>(fresh);
+  // Rendered in the browser only (see WorkspaceLoader), so saved state can be read on first render.
+  const [state, setState] = useState<State>(load);
   const [toast, setToast] = useState("");
 
-  useEffect(() => setState(load()), []);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -110,7 +111,7 @@ export default function Workspace() {
     <div className="ws">
       <header className="ws-top">
         <div className="wrap ws-top-inner">
-          <a className="wordmark" href="/">fuzzyHR</a>
+          <Link className="wordmark" href="/">fuzzyHR</Link>
           <nav className="ws-tabs" aria-label="Workspace">
             {(
               [

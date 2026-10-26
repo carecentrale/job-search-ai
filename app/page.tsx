@@ -98,10 +98,10 @@ export default function Home() {
               for each one, and keeps your search moving while you get on with your day.
             </p>
             <div className="hero-actions">
-              <a className="btn" href="#pricing">Start your free week</a>
-              <a className="link" href="/app">Try the demo</a>
+              <a className="btn" href="/app">Try the demo</a>
+              <a className="link" href="#pricing">See pricing</a>
             </div>
-            <p className="fine">7 days free. No card needed.</p>
+            <p className="fine">Early access. The demo is open now and sign-up opens soon.</p>
           </div>
 
           <aside className="briefing" aria-label="Example of a morning briefing from your headhunter">
@@ -204,7 +204,7 @@ export default function Home() {
           <div className="wrap">
             <div className="section-head">
               <h2 className="section-title">Cheaper than one lunch with a recruiter</h2>
-              <p>Try it for a week. Keep it only if it earns its place in your search.</p>
+              <p>Sign-up opens soon, starting with a free week. Until then, try the demo.</p>
             </div>
             <div className="plans">
               {plans.map((p) => (
@@ -214,7 +214,7 @@ export default function Home() {
                   <ul>
                     {p.features.map((f) => <li key={f}>{f}</li>)}
                   </ul>
-                  <a className={p.featured ? "btn" : "btn btn-ghost"} href="#top">{p.cta}</a>
+                  <a className={p.featured ? "btn" : "btn btn-ghost"} href="/app">Try the demo</a>
                 </div>
               ))}
             </div>
