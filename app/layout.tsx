@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Job Search AI",
+  title: "fuzzyHR",
   description:
     "Paste a job posting and get a CV and cover letter rewritten for it. Free for 7 days.",
 };

@@ -1,4 +1,6 @@
-# Job Search AI 🤖
+# fuzzyHR
+
+*Working name. Formerly Job Search AI.*
 
 An **open-source SaaS platform** that helps job seekers create tailored CVs and cover letters using AI. Built with Next.js, Clerk, Stripe, and Claude API.
 
@@ -32,6 +34,19 @@ An **open-source SaaS platform** that helps job seekers create tailored CVs and 
 - Job search tracking (integrated tracker)
 - Community templates
 - Analytics dashboard
+
+---
+
+## 🕵️ How the daily hunt works
+
+Every morning at 7:00 Toronto time, Vercel Cron calls `/api/cron/hunt` (see `vercel.json`).
+
+1. **Fetch** every company job board once: the starter list in `lib/hunt/boards.ts` plus any companies seekers add. Boards come from the public Greenhouse and Lever APIs (free, no key).
+2. **Score** each new posting against the seeker's brief (`lib/hunt/score.ts`): title match, skills from their CV, location or remote. Postings mentioning anything on their "never show me" list are dropped. Postings older than 30 days lose points and get a warning.
+3. **Remind** (`lib/hunt/followup.ts`): follow up 7 days after applying, prepare 2 days before an interview, finish applications left in "Preparing".
+4. **Save** one briefing per seeker (`lib/store.ts`), shown on the Today screen at `/app`.
+
+Set `CRON_SECRET` in Vercel; the route refuses any request without it. Until the database is connected, `lib/store.ts` serves one demo seeker.
 
 ---
 

@@ -78,13 +78,13 @@ export default function Home() {
     <>
       <header className="nav">
         <div className="wrap nav-inner">
-          <a className="wordmark" href="#top">Job Search AI</a>
+          <a className="wordmark" href="#top">fuzzyHR</a>
           <nav aria-label="Main">
             <a href="#how">What it does</a>
             <a href="#templates">Templates</a>
             <a href="#pricing">Pricing</a>
           </nav>
-          <a className="btn btn-small" href="#pricing">Start free</a>
+          <a className="btn btn-small" href="/app">Try the demo</a>
         </div>
       </header>
 
@@ -99,14 +99,14 @@ export default function Home() {
             </p>
             <div className="hero-actions">
               <a className="btn" href="#pricing">Start your free week</a>
-              <a className="link" href="#how">See what it does</a>
+              <a className="link" href="/app">Try the demo</a>
             </div>
             <p className="fine">7 days free. No card needed.</p>
           </div>
 
           <aside className="briefing" aria-label="Example of a morning briefing from your headhunter">
             <div className="briefing-head">
-              <span className="avatar" aria-hidden="true">JS</span>
+              <span className="avatar" aria-hidden="true">fz</span>
               <div>
                 <p className="briefing-from">Your headhunter</p>
                 <p className="briefing-time">Tuesday, 7:30 am</p>
@@ -234,7 +234,7 @@ export default function Home() {
 
       <footer className="footer">
         <div className="wrap footer-inner">
-          <span>Job Search AI</span>
+          <span>fuzzyHR</span>
           <span>Built by Nicola Delnero with Claude</span>
         </div>
       </footer>
