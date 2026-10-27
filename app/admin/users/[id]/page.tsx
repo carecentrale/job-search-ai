@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin, userDetail } from "@/lib/admin";
+import { changeRole } from "../../actions";
 import { ACTIVITY_LABEL, ago, daysUntil, describe, when } from "@/lib/describe";
 
 const fmt = (v: number | bigint | string) => Number(v).toLocaleString("en-CA");
 
 export default async function AdminUser({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const { id } = await params;
   const data = await userDetail(decodeURIComponent(id));
   if (!data) notFound();
@@ -27,7 +28,23 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
       <p><Link href="/admin" className="textbtn small">All users</Link></p>
 
       <section className="panel">
-        <h1>{u.email ?? "No email"}</h1>
+        <div className="panel-head">
+          <h1>
+            {u.email ?? "No email"}
+            {u.role === "admin" && <span className="pill pill-good">admin</span>}
+          </h1>
+          {u.user_id === admin.userId ? (
+            <span className="muted small">This is you</span>
+          ) : (
+            <form action={changeRole}>
+              <input type="hidden" name="userId" value={u.user_id} />
+              <input type="hidden" name="role" value={u.role === "admin" ? "user" : "admin"} />
+              <button className={`btn btn-small${u.role === "admin" ? " btn-ghost" : ""}`} type="submit">
+                {u.role === "admin" ? "Remove admin access" : "Make admin"}
+              </button>
+            </form>
+          )}
+        </div>
         <dl className="facts">
           <div><dt>User id</dt><dd className="mono">{u.user_id}</dd></div>
           <div><dt>Joined</dt><dd>{when(u.created_at)}</dd></div>

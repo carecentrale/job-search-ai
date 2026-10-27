@@ -22,7 +22,8 @@ export type ActivityType =
   | "key_added"
   | "key_rejected"
   | "key_removed"
-  | "limit_hit";
+  | "limit_hit"
+  | "role_changed";
 
 export async function logActivity(userId: string, type: ActivityType, detail: Record<string, unknown> = {}): Promise<void> {
   try {

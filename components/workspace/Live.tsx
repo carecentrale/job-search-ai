@@ -323,6 +323,7 @@ function Top({
             ))}
           </nav>
         )}
+        {isAdmin && <Link className="admin-link" href="/admin">Admin</Link>}
         {clerk && (
           <div className="ws-user">
             {needsKey && onPlan && (

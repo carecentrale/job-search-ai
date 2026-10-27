@@ -17,7 +17,7 @@ Live at **https://fuzzyhr.vercel.app** · Built by [Nicola Delnero](https://link
 
 Signed-out visitors get a demo at `/app` with sample data.
 
-- **Admin (owner only).** `/admin` shows headline numbers, spend on your Claude key against today's cap, every user (searchable), and a per-user page with their brief, CV, applications, AI usage, briefings and a full activity timeline. `/admin/activity` is a live feed of everything across the site, filterable by event. Admins are set with `ADMIN_EMAILS`; everyone else gets a 404. Users' AI keys are never shown, only their last 4 characters.
+- **Admin (owner only).** `/admin` shows headline numbers, spend on your Claude key against today's cap, every user (searchable), and a per-user page with their brief, CV, applications, AI usage, briefings and a full activity timeline. `/admin/activity` is a live feed of everything across the site, filterable by event. Admins are users with role `admin` in the database: the first account ever created becomes admin automatically, and admins can make others admin from a user's page (but can't remove their own access). `ADMIN_EMAILS` in Vercel also works as a fallback. Everyone else gets a 404. Users' AI keys are never shown, only their last 4 characters.
 
 ## Stack
 
@@ -47,7 +47,7 @@ Set these in Vercel → Project → Settings → Environment Variables.
 | `HOUSE_DAILY_LIMIT_TOTAL` | Optional | Claude requests per day across all users on fuzzyHR's key (default 200). Your ceiling on spend. |
 | `ANTHROPIC_MODEL` | Optional | Claude model, defaults to `claude-sonnet-5-5` |
 | `OPENAI_MODEL` | Optional | Forces one model for OpenAI keys instead of picking the newest |
-| `ADMIN_EMAILS` | You | Comma-separated sign-in emails that can open `/admin` (or `ADMIN_USER_IDS` with Clerk user ids) |
+| `ADMIN_EMAILS` | Optional | Extra way to grant `/admin`: comma-separated sign-in emails (admins are normally set in the database) |
 | `CRON_SECRET` | You, any long random string | Lets Vercel Cron run the morning hunt; every other caller is refused |
 
 Changes to environment variables apply on the next deploy.

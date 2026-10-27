@@ -7,9 +7,10 @@ import type { Briefing } from "./hunt/run";
 import type { Application, Brief } from "./hunt/types";
 
 /**
- * Owner-only admin. Who counts as an admin is set in Vercel:
- *   ADMIN_EMAILS    comma-separated sign-in emails, e.g. you@example.com
- *   ADMIN_USER_IDS  comma-separated Clerk user ids (user_…)
+ * Owner-only admin. Admins are users whose role is 'admin' in the database.
+ * The first account ever created becomes admin automatically (see lib/db.ts),
+ * and admins can promote or demote others from the admin user page.
+ * As a fallback, ADMIN_EMAILS / ADMIN_USER_IDS in Vercel also grant access.
  * Everyone else gets a 404, so the admin area doesn't reveal that it exists.
  */
 
@@ -19,6 +20,9 @@ export async function adminCaller(): Promise<{ userId: string; email: string | n
   if (!hasDb()) return null;
   const caller = await currentCaller();
   if (!caller) return null;
+  const sql = await db();
+  const [row] = await sql<{ role: string; email: string | null }[]>`select role, email from seekers where user_id = ${caller.userId}`;
+  if (row?.role === "admin") return { userId: caller.userId, email: row.email };
   const ids = list(process.env.ADMIN_USER_IDS);
   if (ids.includes(caller.userId.toLowerCase())) return { userId: caller.userId, email: null };
   const emails = list(process.env.ADMIN_EMAILS);
@@ -42,6 +46,7 @@ export type UserRow = {
   created_at: Date;
   last_seen_at: Date | null;
   plan: string;
+  role: string;
   trial_ends_at: Date;
   key_provider: string | null;
   roles: string[];
@@ -62,7 +67,7 @@ export async function listUsers(q = ""): Promise<UserRow[]> {
   const today = usageDay();
   return sql<UserRow[]>`
     select
-      s.user_id, s.email, s.created_at, s.last_seen_at, s.plan, s.trial_ends_at,
+      s.user_id, s.email, s.created_at, s.last_seen_at, s.plan, s.role, s.trial_ends_at,
       case when s.claude_key_enc is not null then coalesce(s.ai_provider, 'anthropic') end as key_provider,
       coalesce((select array_agg(x) from jsonb_array_elements_text(s.brief -> 'targetTitles') x), '{}') as roles,
       s.cv_text is not null as has_cv,
@@ -150,6 +155,7 @@ export type UserDetail = {
   created_at: Date;
   last_seen_at: Date | null;
   plan: string;
+  role: string;
   trial_ends_at: Date;
   key_provider: string | null;
   key_model: string | null;
@@ -166,7 +172,7 @@ export type UserDetail = {
 export async function userDetail(userId: string) {
   const sql = await db();
   const [u] = await sql<UserDetail[]>`
-    select user_id, email, created_at, last_seen_at, plan, trial_ends_at,
+    select user_id, email, created_at, last_seen_at, plan, role, trial_ends_at,
       case when claude_key_enc is not null then coalesce(ai_provider, 'anthropic') end as key_provider,
       ai_model as key_model, claude_key_last4 as key_last4, claude_key_added_at as key_added_at,
       brief, cv_text, applications, jsonb_array_length(passed)::int as passed, jsonb_array_length(matches)::int as matches, last_hunt_at
@@ -178,4 +184,9 @@ export async function userDetail(userId: string) {
   const briefings = await sql<{ date: string; data: Briefing }[]>`
     select to_char(date, 'YYYY-MM-DD') as date, data from briefings where user_id = ${userId} order by date desc limit 14`;
   return { user: u, usage, briefings, activity: await recentActivity({ userId, limit: 300 }) };
+}
+
+export async function setRole(userId: string, role: "admin" | "user"): Promise<void> {
+  const sql = await db();
+  await sql`update seekers set role = ${role}, updated_at = now() where user_id = ${userId}`;
 }

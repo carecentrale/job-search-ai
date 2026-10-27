@@ -57,6 +57,12 @@ async function migrate(db: Sql): Promise<void> {
   await db`alter table seekers add column if not exists ai_provider text`;
   await db`alter table seekers add column if not exists ai_model text`;
   await db`alter table seekers add column if not exists last_seen_at timestamptz`;
+  await db`alter table seekers add column if not exists role text not null default 'user'`;
+  // The site owner is the first account ever created. If there's no admin yet, promote it.
+  await db`
+    update seekers set role = 'admin'
+    where user_id = (select user_id from seekers order by created_at asc limit 1)
+      and not exists (select 1 from seekers where role = 'admin')`;
   await db`
     create table if not exists activity (
       id      bigserial primary key,

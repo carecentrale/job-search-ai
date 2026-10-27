@@ -102,8 +102,12 @@ export async function getOrCreateSeeker(userId: string, email: () => Promise<str
   if (existing) return existing;
   const sql = await db();
   const rows = await sql<Row[]>`
-    insert into seekers (user_id, email, trial_ends_at)
-    values (${userId}, ${await email()}, ${new Date(Date.now() + TRIAL_DAYS * 86_400_000)})
+    insert into seekers (user_id, email, trial_ends_at, role)
+    values (
+      ${userId}, ${await email()}, ${new Date(Date.now() + TRIAL_DAYS * 86_400_000)},
+      -- the very first account on a fresh site is its owner
+      case when exists (select 1 from seekers) then 'user' else 'admin' end
+    )
     on conflict (user_id) do update set updated_at = now()
     returning *, (xmax = 0) as inserted`;
   const record = toRecord(rows[0]);

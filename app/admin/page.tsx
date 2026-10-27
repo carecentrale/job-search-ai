@@ -80,7 +80,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   const plan = planLabel(r);
                   return (
                     <tr key={r.user_id}>
-                      <td><Link href={`/admin/users/${encodeURIComponent(r.user_id)}`}>{r.email ?? r.user_id}</Link>{!r.has_cv && <span className="pill pill-muted">no CV</span>}</td>
+                      <td><Link href={`/admin/users/${encodeURIComponent(r.user_id)}`}>{r.email ?? r.user_id}</Link>{r.role === "admin" && <span className="pill pill-good">admin</span>}{!r.has_cv && <span className="pill pill-muted">no CV</span>}</td>
                       <td><span className={`pill pill-${plan.tone}`}>{plan.text}</span></td>
                       <td className="clip">{r.roles.length ? r.roles.join(", ") : <span className="muted">not set</span>}</td>
                       <td className="num">{r.matches}</td>

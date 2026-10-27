@@ -22,6 +22,7 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   key_rejected: "AI key rejected",
   key_removed: "AI key removed",
   limit_hit: "Hit a limit",
+  role_changed: "Role changed",
 };
 
 export function describe(type: string, d: D): string {
@@ -60,6 +61,8 @@ export function describe(type: string, d: D): string {
       return `Removed their ${provider(d.provider)} key.`;
     case "limit_hit":
       return s(d.message);
+    case "role_changed":
+      return `${d.to === "admin" ? "Made an admin" : "Admin access removed"} by ${s(d.by)}.`;
     default:
       return JSON.stringify(d);
   }
