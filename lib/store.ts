@@ -21,6 +21,7 @@ export async function listActiveSeekers(): Promise<Seeker[]> {
       applications: sampleApplications(),
       passed: [],
       matches: [],
+      agent: { autopilot: false, minFit: 80, perDay: 2 },
     },
   ];
 }

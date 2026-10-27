@@ -2,13 +2,20 @@
 
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { WorkspaceState } from "@/lib/api";
-import type { ApplicationStatus, Brief, ScoredJob } from "@/lib/hunt/types";
+import type { AgentSettings, ApplicationStatus, Brief, ScoredJob } from "@/lib/hunt/types";
 import { AppCard, BriefEditor, COLUMNS, JobRow, STATUS_LABEL } from "./parts";
 
 type Tab = "today" | "shortlist" | "tracker" | "brief" | "plan";
-type Reply = { state: WorkspaceState; suggestedBrief?: Brief | null; hunt?: { read: number; found: number; boardErrors: number } | null };
+type Reply = {
+  state: WorkspaceState;
+  suggestedBrief?: Brief | null;
+  hunt?: { read: number; found: number; boardErrors: number } | null;
+  review?: { reviewed: number; approved: number };
+  company?: { name: string; openRoles: number };
+  added?: { company: string; title: string };
+};
 
 async function call(path: string, init?: RequestInit): Promise<Reply> {
   const res = await fetch(path, init);
@@ -35,6 +42,10 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
   const [suggested, setSuggested] = useState<Brief | null>(null);
+  /** What the headhunter is doing in the background, if anything. */
+  const [agentMsg, setAgentMsg] = useState<string | null>(null);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const agentRunning = useRef(false);
 
   useEffect(() => {
     call("/api/me").then((r) => setState(r.state), (e: Error) => setLoadError(e.message));
@@ -44,6 +55,41 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
     const t = setTimeout(() => setToast(null), toast.error ? 6000 : 3000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  /**
+   * The agent, from the browser: while there are matches the AI hasn't reviewed,
+   * ask for a review; while Autopilot has approvals without documents, write
+   * them, one at a time. Stops at the first error and says why.
+   */
+  useEffect(() => {
+    if (!state || !state.onboarded || !state.ai || agentRunning.current || agentError) return;
+    const review = state.unreviewed > 0;
+    const writeId = state.autopilotPending[0];
+    if (!review && !writeId) return;
+    agentRunning.current = true;
+    const app = state.applications.find((a) => a.id === writeId);
+    const run = async () => {
+      setAgentMsg(
+        review
+          ? `Reading ${Math.min(state.unreviewed, 12)} new match${state.unreviewed === 1 ? "" : "es"} against your CV…`
+          : `Autopilot is writing your CV and cover letter for ${app?.job.company ?? "a role"}…`,
+      );
+      try {
+        const r = review
+          ? await call("/api/me/review", { method: "POST" })
+          : await call(`/api/me/applications/${encodeURIComponent(writeId)}/tailor`, { method: "POST" });
+        setState(r.state);
+        if (r.review?.approved) setToast({ text: `Autopilot approved ${r.review.approved} role${r.review.approved === 1 ? "" : "s"}. They're in your tracker.` });
+        if (!review && app) setToast({ text: `Autopilot wrote your ${app.job.company} CV and letter. Review them before you send.` });
+      } catch (e) {
+        setAgentError((e as Error).message);
+      } finally {
+        agentRunning.current = false;
+        setAgentMsg(null);
+      }
+    };
+    void run();
+  }, [state, agentError]);
 
   /** Run an action, keep the button busy, show the outcome. */
   const act = useCallback(async (key: string, run: () => Promise<Reply>, done?: (r: Reply) => string | void) => {
@@ -72,10 +118,11 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
   }
 
   const { trial } = state;
+  const top = state.matches.filter((m) => m.review?.verdict !== "skip").slice(0, 3);
   const approve = (j: ScoredJob) =>
     act(`job:${j.id}`, () => call("/api/me/applications", json("POST", { jobId: j.id })), () => {
       setTab("tracker");
-      return `Added ${j.company} to your tracker`;
+      return `Approved. ${j.company} is in your tracker`;
     });
   const pass = (j: ScoredJob) => act(`job:${j.id}`, () => call("/api/me/pass", json("POST", { jobId: j.id })), () => `Passed on ${j.company}`);
   const setStatus = (id: string, status: ApplicationStatus) =>
@@ -84,7 +131,27 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
     act(`app:${id}`, () => call(`/api/me/applications/${id}`, json("PATCH", { followedUp: true })), () => "Follow-up logged. I'll remind you again in 7 days.");
   const tailor = (id: string, company: string) =>
     act(`tailor:${id}`, () => call(`/api/me/applications/${id}/tailor`, { method: "POST" }), () => `Your ${company} CV and cover letter are ready`);
-  const huntNow = () => act("hunt", () => call("/api/me/hunt", { method: "POST" }), (r) => (r.hunt ? huntSummary(r.hunt) : undefined));
+  const huntNow = () =>
+    act("hunt", () => call("/api/me/hunt", { method: "POST" }), (r) => {
+      setAgentError(null);
+      return r.hunt ? huntSummary(r.hunt) : undefined;
+    });
+  const saveAgent = (a: AgentSettings) =>
+    act("agent", () => call("/api/me/agent", json("PUT", a)), () => {
+      setAgentError(null);
+      return a.autopilot ? `Autopilot on: roles the AI scores ${a.minFit}+, up to ${a.perDay} a day` : "Autopilot off. I'll ask before every application.";
+    });
+  const followCompany = (url: string) =>
+    act("company", () => call("/api/me/companies", json("POST", { url })), (r) =>
+      r.company ? `Following ${r.company.name}: ${r.company.openRoles} open role${r.company.openRoles === 1 ? "" : "s"}. They'll be in your next hunt.` : undefined,
+    );
+  const unfollow = (source: string, board: string) => act("company", () => call("/api/me/companies", json("DELETE", { source, board })), () => "Stopped following");
+  const addJob = (url: string) =>
+    act("addjob", () => call("/api/me/jobs", json("POST", { url })), (r) => {
+      setAgentError(null);
+      setTab("shortlist");
+      return r.added ? `Added ${r.added.title} at ${r.added.company} to your shortlist` : undefined;
+    });
   const saveBrief = (b: Brief) =>
     act("brief", () => call("/api/me/brief", json("PUT", b)), (r) => {
       setSuggested(null);
@@ -138,6 +205,18 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
       </div>
 
       <main className="wrap ws-main">
+        {state.onboarded && (agentMsg || agentError) && tab !== "plan" && (
+          <div className="agent-note" role="status">
+            {agentMsg ? (
+              <><span className="dot" aria-hidden="true" />{agentMsg}</>
+            ) : (
+              <span>
+                <span className="warn">I paused the AI review:</span> {agentError}{" "}
+                <button className="textbtn small" onClick={() => setAgentError(null)}>Try again</button>
+              </span>
+            )}
+          </div>
+        )}
         {tab === "plan" ? (
           <PlanPanel state={state} busy={busy === "key"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} />
         ) : !state.onboarded ? (
@@ -180,9 +259,14 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
                   </div>
                   {state.matches.length === 0 ? (
                     <p className="muted">Nothing on your shortlist right now. I hunt every morning at 7, or press Hunt now. Widening the roles or cities in your brief brings in more.</p>
+                  ) : top.length === 0 ? (
+                    <p className="muted">
+                      The AI suggests skipping the {state.matches.length === 1 ? "one role" : `${state.matches.length} roles`} left.{" "}
+                      <button className="textbtn" onClick={() => setTab("shortlist")}>See why</button>
+                    </p>
                   ) : (
                     <ul className="jobs">
-                      {state.matches.slice(0, 3).map((j) => <JobRow key={j.id} job={j} busy={busy === `job:${j.id}`} onApprove={approve} onPass={pass} />)}
+                      {top.map((j) => <JobRow key={j.id} job={j} busy={busy === `job:${j.id}`} onApprove={approve} onPass={pass} />)}
                     </ul>
                   )}
                 </div>
@@ -193,14 +277,13 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
               <section className="panel">
                 <div className="panel-head">
                   <h1>Shortlist</h1>
-                  <p className="muted">Scored against your brief. Prepare an application and I&apos;ll write the CV and cover letter.</p>
+                  <p className="muted">I find roles by keyword, then the AI reads each one against your CV and recommends the ones worth your time. You approve or pass. Once you approve, I can write the CV and cover letter.</p>
                 </div>
+                <AddJob busy={busy === "addjob"} onAdd={addJob} />
                 {state.matches.length === 0 ? (
                   <p className="muted">Nothing left to review. New matches arrive every morning.</p>
                 ) : (
-                  <ul className="jobs">
-                    {state.matches.map((j) => <JobRow key={j.id} job={j} expanded busy={busy === `job:${j.id}`} onApprove={approve} onPass={pass} />)}
-                  </ul>
+                  <Shortlist matches={state.matches} busy={busy} onApprove={approve} onPass={pass} />
                 )}
               </section>
             )}
@@ -208,7 +291,7 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
             {tab === "tracker" && (
               <section>
                 <h1 className="ws-h1">Tracker</h1>
-                {state.applications.length === 0 && <p className="muted">Nothing here yet. Choose Prepare application on a match to start.</p>}
+                {state.applications.length === 0 && <p className="muted">Nothing here yet. Approve a match on your shortlist to start.</p>}
                 <div className="board">
                   {COLUMNS.map((col) => {
                     const items = state.applications.filter((a) => a.status === col);
@@ -222,7 +305,7 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
                             app={a}
                             busy={busy === `app:${a.id}` || busy === `tailor:${a.id}`}
                             due={state.nudges.some((n) => n.appId === a.id && n.kind === "follow-up")}
-                            draftLine={a.tailored ? "CV and cover letter ready" : "Not written yet"}
+                            draftLine={`${a.approvedBy === "autopilot" ? "Approved by Autopilot. " : ""}${a.tailored ? "CV and cover letter ready" : state.autopilotPending.includes(a.id) ? "Autopilot will write this" : "Not written yet"}`}
                             onStatus={setStatus}
                             onFollowUp={followedUp}
                           >
@@ -259,6 +342,14 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
                   busy={busy === "brief"}
                   onSave={saveBrief}
                   intro="This is what I hunt for every morning. Separate items with commas. Saving rescans the last three weeks of postings."
+                />
+                <HuntSettings
+                  state={state}
+                  busy={busy}
+                  onAgent={saveAgent}
+                  onFollow={followCompany}
+                  onUnfollow={unfollow}
+                  onPlan={() => setTab("plan")}
                 />
                 <CvPanel state={state} busy={busy === "cv"} onCv={uploadCv} />
               </div>
@@ -552,5 +643,154 @@ function PlanPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function Shortlist({
+  matches,
+  busy,
+  onApprove,
+  onPass,
+}: {
+  matches: ScoredJob[];
+  busy: string | null;
+  onApprove: (j: ScoredJob) => void;
+  onPass: (j: ScoredJob) => void;
+}) {
+  const recommended = matches.filter((m) => m.review?.verdict === "recommend");
+  const rest = matches.filter((m) => m.review?.verdict !== "recommend" && m.review?.verdict !== "skip");
+  const skipped = matches.filter((m) => m.review?.verdict === "skip");
+  const row = (j: ScoredJob) => <JobRow key={j.id} job={j} expanded busy={busy === `job:${j.id}`} onApprove={onApprove} onPass={onPass} />;
+  return (
+    <>
+      {recommended.length > 0 && (
+        <>
+          <h2 className="group-head">Recommended for you · {recommended.length}</h2>
+          <ul className="jobs">{recommended.map(row)}</ul>
+        </>
+      )}
+      {rest.length > 0 && (
+        <>
+          <h2 className="group-head">{recommended.length ? "Worth a look" : "To review"} · {rest.length}</h2>
+          <ul className="jobs">{rest.map(row)}</ul>
+        </>
+      )}
+      {skipped.length > 0 && (
+        <details className="skipped">
+          <summary>The AI suggests skipping {skipped.length} role{skipped.length === 1 ? "" : "s"}. Show them</summary>
+          <ul className="jobs">{skipped.map(row)}</ul>
+        </details>
+      )}
+    </>
+  );
+}
+
+function AddJob({ busy, onAdd }: { busy: boolean; onAdd: (url: string) => void }) {
+  const [url, setUrl] = useState("");
+  return (
+    <form
+      className="inline-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onAdd(url.trim());
+        setUrl("");
+      }}
+    >
+      <label htmlFor="job-link" className="sr-only">Link to a job posting</label>
+      <input id="job-link" type="url" inputMode="url" placeholder="Found a job yourself? Paste its link" value={url} onChange={(e) => setUrl(e.target.value)} />
+      <button className="btn btn-small btn-ghost" type="submit" disabled={busy || !/^https:\/\/.+\..+/.test(url.trim())}>{busy ? "Reading…" : "Add job"}</button>
+    </form>
+  );
+}
+
+function HuntSettings({
+  state,
+  busy,
+  onAgent,
+  onFollow,
+  onUnfollow,
+  onPlan,
+}: {
+  state: WorkspaceState;
+  busy: string | null;
+  onAgent: (a: AgentSettings) => void;
+  onFollow: (url: string) => void;
+  onUnfollow: (source: string, board: string) => void;
+  onPlan: () => void;
+}) {
+  const [url, setUrl] = useState("");
+  const a = state.agent;
+  const src = state.sources;
+  const sites = [src.adzuna && "Adzuna", src.jooble && "Jooble"].filter(Boolean) as string[];
+  return (
+    <div className="panel">
+      <h2>How I hunt</h2>
+      <p className="muted small">
+        Every morning I check {src.companies} companies&apos; job boards{src.following.length ? `, plus the ${src.following.length} you follow` : ""}
+        {sites.length ? `, and search ${sites.join(" and ")} for your roles and cities` : ""}. Keyword matches go to the AI, which recommends the ones worth your time.
+      </p>
+
+      <h3 className="small" style={{ marginTop: 18 }}>Autopilot</h3>
+      <div className="toggle-row">
+        <input
+          id="autopilot"
+          type="checkbox"
+          checked={a.autopilot}
+          disabled={busy === "agent" || !state.ai}
+          onChange={(e) => onAgent({ ...a, autopilot: e.target.checked })}
+        />
+        <label htmlFor="autopilot">
+          <strong>Let me approve strong matches for you</strong>
+          <span className="muted small" style={{ display: "block" }}>
+            When the AI rates a role highly, I&apos;ll approve it and write the CV and cover letter without asking. I never send anything. You review every application and submit it yourself.
+            {state.claude.mode === "house" ? " On the free week, each approval uses one of your 5 tailored applications." : ""}
+          </span>
+          {!state.ai && <button type="button" className="textbtn small" onClick={onPlan}>Add your AI key to use Autopilot</button>}
+        </label>
+      </div>
+      {a.autopilot && (
+        <div className="agent-limits">
+          <label>
+            Only roles the AI scores
+            <select value={a.minFit} disabled={busy === "agent"} onChange={(e) => onAgent({ ...a, minFit: Number(e.target.value) })}>
+              {[70, 75, 80, 85, 90].map((n) => <option key={n} value={n}>{n} or higher</option>)}
+            </select>
+          </label>
+          <label>
+            At most
+            <select value={a.perDay} disabled={busy === "agent"} onChange={(e) => onAgent({ ...a, perDay: Number(e.target.value) })}>
+              {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} a day</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+
+      <h3 className="small" style={{ marginTop: 18 }}>Companies you follow</h3>
+      <p className="muted small">Paste a company&apos;s careers page and I&apos;ll check its jobs every morning. Works with companies that use Greenhouse, Lever, Ashby or Recruitee, which covers most tech companies.</p>
+      <form
+        className="inline-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onFollow(url.trim());
+          setUrl("");
+        }}
+      >
+        <label htmlFor="company-link" className="sr-only">Company careers link</label>
+        <input id="company-link" type="url" inputMode="url" placeholder="https://company.com/careers" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <button className="btn btn-small btn-ghost" type="submit" disabled={busy === "company" || !/^https:\/\/.+\..+/.test(url.trim())}>
+          {busy === "company" ? "Checking…" : "Follow"}
+        </button>
+      </form>
+      {src.following.length > 0 && (
+        <ul className="follow-list">
+          {src.following.map((b) => (
+            <li key={`${b.source}:${b.board}`}>
+              <span>{b.company ?? b.board} <span className="muted small">· {b.source}</span></span>
+              <button className="textbtn small" disabled={busy === "company"} onClick={() => onUnfollow(b.source, b.board)}>Unfollow</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

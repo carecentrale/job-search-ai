@@ -23,7 +23,13 @@ export type ActivityType =
   | "key_rejected"
   | "key_removed"
   | "limit_hit"
-  | "role_changed";
+  | "role_changed"
+  | "ai_review"
+  | "autopilot_approved"
+  | "autopilot_changed"
+  | "company_added"
+  | "company_removed"
+  | "job_link_added";
 
 export async function logActivity(userId: string, type: ActivityType, detail: Record<string, unknown> = {}): Promise<void> {
   try {

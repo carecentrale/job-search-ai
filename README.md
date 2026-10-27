@@ -49,6 +49,18 @@ Set these in Vercel → Project → Settings → Environment Variables.
 | `OPENAI_MODEL` | Optional | Forces one model for OpenAI keys instead of picking the newest |
 | `ADMIN_EMAILS` | Optional | Extra way to grant `/admin`: comma-separated sign-in emails (admins are normally set in the database) |
 | `CRON_SECRET` | You, any long random string | Lets Vercel Cron run the morning hunt; every other caller is refused |
+| `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Optional, free at developer.adzuna.com | Adds Adzuna job search to the hunt |
+| `JOOBLE_API_KEY` | Optional, free at jooble.org/api/about | Adds Jooble job search to the hunt |
+
+## How the hunt works
+
+1. **Find.** Every morning at 7 (Toronto), fuzzyHR reads the public job boards of 115 companies (Greenhouse, Lever, Ashby, Recruitee; list in `lib/hunt/boards.ts`), the companies each user follows, and, when keys are set, Adzuna and Jooble searches built from each user's roles and cities. Duplicates are merged.
+2. **Filter.** New postings are scored by keyword against the brief (titles, strengths, cities, avoid list).
+3. **Review.** The AI reads the top keyword matches against the user's whole CV, up to 12 per call, and marks each Recommended, Worth a look, or Skip, with its own fit score and reasons.
+4. **Approve.** The user approves or passes. With **Autopilot** on, fuzzyHR approves Recommended roles at or above the user's fit threshold, up to their daily limit, and writes the CV and cover letter. It never submits anything.
+5. Users can also follow a company by pasting its careers page, or add a single job by pasting its link.
+
+The review and Autopilot run in the morning job while time allows, and otherwise from the workspace when the user opens it. Each review or write is one AI request, counted against the free-week caps on fuzzyHR's key.
 
 Changes to environment variables apply on the next deploy.
 

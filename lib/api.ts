@@ -7,6 +7,8 @@ import { canStoreSecrets } from "./crypto";
 import { hasDb } from "./db";
 import { ApiError } from "./errors";
 import { nudgesFor } from "./hunt/followup";
+import { STARTER_BOARDS } from "./hunt/boards";
+import { searchSitesOn } from "./hunt/search";
 import { getOrCreateSeeker, hasOwnKey, isOnboarded, latestBriefing, trialStatus, type SeekerRecord } from "./seekers";
 
 export { ApiError };
@@ -56,6 +58,12 @@ export async function stateFor(s: SeekerRecord) {
     nudges: nudgesFor(s.applications),
     briefing: await latestBriefing(s.id),
     lastHuntAt: s.lastHuntAt,
+    agent: s.agent,
+    /** Matches the AI hasn't reviewed yet; the workspace asks for a review when this is above 0. */
+    unreviewed: s.matches.filter((m) => !m.review).length,
+    /** Autopilot approvals still waiting for their CV and letter. */
+    autopilotPending: s.applications.filter((a) => a.approvedBy === "autopilot" && !a.tailored && a.status === "preparing").map((a) => a.id),
+    sources: { companies: STARTER_BOARDS.length, following: s.extraBoards, ...searchSitesOn() },
     trial,
     /** Can Claude write for this user right now (subject to daily caps on fuzzyHR's key)? */
     ai: own || house,

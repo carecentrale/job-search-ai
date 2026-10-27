@@ -23,6 +23,12 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   key_removed: "AI key removed",
   limit_hit: "Hit a limit",
   role_changed: "Role changed",
+  ai_review: "AI reviewed matches",
+  autopilot_approved: "Autopilot approved a role",
+  autopilot_changed: "Autopilot settings",
+  company_added: "Followed a company",
+  company_removed: "Unfollowed a company",
+  job_link_added: "Added a job link",
 };
 
 export function describe(type: string, d: D): string {
@@ -48,7 +54,7 @@ function describeEvent(type: string, d: D): string {
     case "job_passed":
       return `Passed on ${s(d.title) || "a posting"}${at(d)}${d.fit ? ` (fit ${s(d.fit)})` : ""}.`;
     case "application_created":
-      return `Started ${s(d.title)}${at(d)}${d.fit ? ` (fit ${s(d.fit)})` : ""}.`;
+      return `Approved ${s(d.title)}${at(d)}${d.fit ? ` (fit ${s(d.fit)}${d.aiVerdict ? `, AI said ${s(d.aiVerdict)}${d.aiFit != null ? ` ${s(d.aiFit)}` : ""}` : ""})` : ""}.`;
     case "status_changed":
       return `${s(d.title)}${at(d)}: ${s(d.from)} → ${s(d.to)}.`;
     case "followed_up":
@@ -69,6 +75,18 @@ function describeEvent(type: string, d: D): string {
       return s(d.message);
     case "role_changed":
       return `${d.to === "admin" ? "Made an admin" : "Admin access removed"} by ${s(d.by)}.`;
+    case "ai_review":
+      return `${provider(d.provider)} reviewed ${n(d.reviewed)} matches (${d.trigger === "daily" ? "morning" : d.trigger === "manual" ? "asked for" : "automatic"}): ${n(d.recommend)} recommended, ${n(d.maybe)} maybe, ${n(d.skip)} skip${d.keySource ? `, on ${d.keySource === "own" ? "their own key" : "your key"}` : ""}.${d.inputTokens ? ` ${n(d.inputTokens)} in / ${n(d.outputTokens)} out tokens.` : ""}`;
+    case "autopilot_approved":
+      return `Autopilot approved ${s(d.title)}${at(d)} (AI fit ${s(d.aiFit)}).`;
+    case "autopilot_changed":
+      return `Autopilot ${d.autopilot ? "on" : "off"}: AI fit ${s(d.minFit)}+, up to ${s(d.perDay)} a day.`;
+    case "company_added":
+      return `Followed ${s(d.company)} (${s(d.source)}, ${n(d.openRoles)} open roles).`;
+    case "company_removed":
+      return `Stopped following ${s(d.company)}.`;
+    case "job_link_added":
+      return `Added ${s(d.title)}${at(d)} by link (read via ${s(d.via)}, fit ${s(d.fit)}).`;
     default:
       return JSON.stringify(d);
   }

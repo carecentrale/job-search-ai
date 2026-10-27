@@ -9,12 +9,12 @@ export async function POST(req: Request) {
     const { jobId } = await readJson<{ jobId?: string }>(req);
     const job = s.matches.find((m) => m.id === jobId);
     if (!job) throw new ApiError(404, "That posting is no longer on your shortlist.");
-    const app: Application = { id: `a-${job.id}`, job, status: "preparing", createdAt: new Date().toISOString() };
+    const app: Application = { id: `a-${job.id}`, job, status: "preparing", createdAt: new Date().toISOString(), approvedBy: "you" };
     const saved = await updateSeeker(s.id, {
       applications: [app, ...s.applications.filter((a) => a.id !== app.id)],
       matches: s.matches.filter((m) => m.id !== job.id),
     });
-    await logActivity(s.id, "application_created", { company: job.company, title: job.title, fit: job.fit, url: job.url });
+    await logActivity(s.id, "application_created", { company: job.company, title: job.title, fit: job.fit, aiVerdict: job.review?.verdict ?? null, aiFit: job.review?.fit ?? null, url: job.url });
     return stateResponse(saved, { applicationId: app.id });
   });
 }

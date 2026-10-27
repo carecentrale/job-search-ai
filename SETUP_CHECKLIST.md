@@ -12,9 +12,10 @@
 - [ ] **ANTHROPIC_API_KEY** (optional): fuzzyHR's key for free-week users. Skip it to run on users' own keys only.
 - [x] **Admin**: the first account (yours) is admin automatically; no setting needed
 - [ ] **CRON_SECRET** (Environment Variables): any long random string, so the 7 am hunt can run
-- [ ] Redeploy once all four are in, then sign up on the live site to test
+- [ ] Optional, more jobs: free keys from developer.adzuna.com (`ADZUNA_APP_ID`, `ADZUNA_APP_KEY`) and jooble.org/api/about (`JOOBLE_API_KEY`)
+- [ ] Redeploy once these are in, then sign up on the live site to test
 
 ## Later
 - [ ] Paid plans with Stripe ($29 Personal, $99 Coach)
 - [ ] Final name and domain
-- [ ] More job boards, and letting users add companies to hunt
+- [x] More job boards (115 companies), job search sites, AI review, Autopilot, follow companies, add jobs by link

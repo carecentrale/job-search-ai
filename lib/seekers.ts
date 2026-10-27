@@ -3,7 +3,7 @@ import { logActivity } from "./activity";
 import { db } from "./db";
 import type { Briefing, Seeker } from "./hunt/run";
 import type { BoardRef } from "./hunt/sources";
-import type { Application, Brief, ScoredJob } from "./hunt/types";
+import { DEFAULT_AGENT, type AgentSettings, type Application, type Brief, type ScoredJob } from "./hunt/types";
 
 /** Free week: 5 tailored applications. */
 export const TRIAL_APPLICATION_LIMIT = 5;
@@ -42,6 +42,7 @@ type Row = {
   claude_key_last4: string | null;
   ai_provider: Provider | null;
   ai_model: string | null;
+  agent: Partial<AgentSettings> | null;
 };
 
 const EMPTY_BRIEF: Brief = { name: "", targetTitles: [], skills: [], locations: [], remoteOk: true, avoid: [] };
@@ -64,6 +65,7 @@ function toRecord(r: Row): SeekerRecord {
     claudeKeyLast4: r.claude_key_last4,
     aiProvider: r.claude_key_enc ? (r.ai_provider ?? "anthropic") : null,
     aiModel: r.ai_model,
+    agent: { ...DEFAULT_AGENT, ...(r.agent ?? {}) },
   };
 }
 
@@ -122,6 +124,8 @@ type Patch = Partial<{
   passed: string[];
   matches: ScoredJob[];
   lastHuntAt: Date;
+  extraBoards: BoardRef[];
+  agent: AgentSettings;
   /** Encrypted key and its last 4 characters, or null to remove. */
   claudeKey: { enc: string; last4: string; provider: Provider; model: string } | null;
 }>;
@@ -136,6 +140,8 @@ export async function updateSeeker(userId: string, p: Patch): Promise<SeekerReco
   if (p.passed) set.passed = sql.json(p.passed);
   if (p.matches) set.matches = sql.json(p.matches);
   if (p.lastHuntAt) set.last_hunt_at = p.lastHuntAt;
+  if (p.extraBoards) set.extra_boards = sql.json(p.extraBoards);
+  if (p.agent) set.agent = sql.json(p.agent);
   if (p.claudeKey !== undefined) {
     set.claude_key_enc = p.claudeKey?.enc ?? null;
     set.claude_key_last4 = p.claudeKey?.last4 ?? null;

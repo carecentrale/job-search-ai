@@ -12,7 +12,7 @@ export async function POST(req: Request) {
       passed: [jobId, ...s.passed.filter((p) => p !== jobId)].slice(0, 1000),
       matches: s.matches.filter((m) => m.id !== jobId),
     });
-    await logActivity(s.id, "job_passed", { jobId, company: job?.company, title: job?.title, fit: job?.fit });
+    await logActivity(s.id, "job_passed", { jobId, company: job?.company, title: job?.title, fit: job?.fit, aiVerdict: job?.review?.verdict ?? null });
     return stateResponse(saved);
   });
 }

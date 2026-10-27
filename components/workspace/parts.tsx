@@ -22,6 +22,14 @@ export function ago(iso: string) {
   return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
 }
 
+const VERDICT = {
+  recommend: { label: "Recommended", cls: "ai-yes" },
+  maybe: { label: "Worth a look", cls: "ai-maybe" },
+  skip: { label: "AI suggests skipping", cls: "ai-no" },
+} as const;
+
+const SOURCE_LABEL: Partial<Record<ScoredJob["source"], string>> = { adzuna: "via Adzuna", jooble: "via Jooble", link: "added by link" };
+
 export function JobRow({
   job,
   onApprove,
@@ -35,20 +43,39 @@ export function JobRow({
   expanded?: boolean;
   busy?: boolean;
 }) {
+  const r = job.review;
+  const v = r ? VERDICT[r.verdict] : null;
+  const via = job.addedByYou ? "you added this" : SOURCE_LABEL[job.source];
   return (
-    <li className="job">
-      <div className={`fit${job.warnings.some((w) => w.startsWith("Posted")) ? " fit-warn" : ""}`}><span>{job.fit}</span>fit</div>
+    <li className={`job${r?.verdict === "skip" ? " job-dim" : ""}`}>
+      <div
+        className={`fit${r ? " fit-ai" : ""}${job.warnings.some((w) => w.startsWith("Posted")) ? " fit-warn" : ""}`}
+        title={r ? `AI fit ${r.fit}. Keyword fit ${job.fit}.` : `Keyword fit ${job.fit}. The AI hasn't reviewed this one yet.`}
+      >
+        <span>{r ? r.fit : job.fit}</span>{r ? "AI fit" : "fit"}
+      </div>
       <div className="job-body">
         <p className="role">
           {job.url && job.url !== "#" ? <a href={job.url} target="_blank" rel="noopener noreferrer">{job.title}</a> : job.title}
         </p>
-        <p className="muted small">{job.company}, {job.location || "location not stated"}. Posted {ago(job.postedAt)}.</p>
-        {job.reasons.length > 0 && <p className="why">{job.reasons.join(". ")}.</p>}
-        {job.warnings.map((w) => <p key={w} className="warn small">{w}</p>)}
+        <p className="muted small">
+          {job.company}, {job.location || "location not stated"}. Posted {ago(job.postedAt)}.{via ? <span className="via"> {via}</span> : null}
+        </p>
+        {r && v ? (
+          <>
+            <p className="why"><span className={`ai-tag ${v.cls}`}>{v.label}</span> {r.why}</p>
+            {r.concerns.length > 0 && <p className="warn small">Check: {r.concerns.join("; ")}.</p>}
+          </>
+        ) : (
+          <>
+            {job.reasons.length > 0 && <p className="why">{job.reasons.join(". ")}.</p>}
+            {job.warnings.map((w) => <p key={w} className="warn small">{w}</p>)}
+          </>
+        )}
         {expanded && <p className="excerpt small">{job.description.slice(0, 600)}{job.description.length > 600 ? "…" : ""}</p>}
       </div>
       <div className="job-actions">
-        <button className="btn btn-small" disabled={busy} onClick={() => onApprove(job)}>Prepare application</button>
+        <button className="btn btn-small" disabled={busy} onClick={() => onApprove(job)}>Approve</button>
         <button className="btn btn-small btn-ghost" disabled={busy} onClick={() => onPass(job)}>Pass</button>
       </div>
     </li>

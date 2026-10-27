@@ -2,8 +2,9 @@ import { STARTER_BOARDS } from "./boards";
 import { nudgesFor, type Nudge } from "./followup";
 import { sampleJobs } from "./sample";
 import { shortlist } from "./score";
+import { dedupe, queriesFor, queryKey, runSearches, searchSitesOn } from "./search";
 import { fetchBoards, type BoardRef } from "./sources";
-import type { Application, Brief, Job, ScoredJob } from "./types";
+import type { AgentSettings, Application, Brief, Job, ScoredJob } from "./types";
 
 /** How far back the first hunt (or a rescan after the brief changes) looks. */
 export const FIRST_HUNT_DAYS = 21;
@@ -24,6 +25,8 @@ export type Seeker = {
   passed: string[];
   /** Their current shortlist, built up across hunts. */
   matches: ScoredJob[];
+  /** Autopilot and its limits. */
+  agent: AgentSettings;
 };
 
 /** What the seeker reads in the morning. */
@@ -57,27 +60,52 @@ export function buildBriefing(
     seekerId: seeker.id,
     date: today.toISOString().slice(0, 10),
     postingsRead: fresh.length,
-    newMatches: shortlist(seeker.brief, fresh, today, 10),
+    newMatches: shortlist(seeker.brief, fresh, today, 15),
     nudges: nudgesFor(seeker.applications, today),
     errors,
   };
+}
+
+/**
+ * Shortlist order: AI recommendations first, then roles it hasn't looked at yet
+ * and "maybe"s, then the ones it advised skipping. Within each, best fit first.
+ */
+export function rankMatches(matches: ScoredJob[]): ScoredJob[] {
+  const tier = (m: ScoredJob) => (m.review?.verdict === "recommend" ? 0 : m.review?.verdict === "skip" ? 2 : 1);
+  const score = (m: ScoredJob) => m.review?.fit ?? m.fit;
+  return [...matches].sort((a, b) => tier(a) - tier(b) || score(b) - score(a));
 }
 
 /** Fold a briefing's matches into the running shortlist: no repeats, nothing stale, best first. */
 export function mergeMatches(seeker: Seeker, incoming: ScoredJob[], today = new Date(), replace = false): ScoredJob[] {
   const excluded = new Set([...seeker.passed, ...seeker.applications.map((a) => a.job.id)]);
   const byId = new Map<string, ScoredJob>();
-  for (const m of [...(replace ? [] : seeker.matches), ...incoming]) byId.set(m.id, m);
-  return [...byId.values()]
-    .filter((m) => !excluded.has(m.id) && today.getTime() - new Date(m.postedAt).getTime() < MATCH_MAX_AGE_DAYS * DAY)
-    .sort((a, b) => b.fit - a.fit)
-    .slice(0, MAX_MATCHES);
+  // Keep anything the seeker added themselves, even on a rescan.
+  const kept = replace ? seeker.matches.filter((m) => m.addedByYou) : seeker.matches;
+  for (const m of kept) byId.set(m.id, m);
+  // A posting seen again keeps its AI review.
+  for (const m of incoming) byId.set(m.id, { ...m, review: byId.get(m.id)?.review });
+  return rankMatches(
+    [...byId.values()].filter(
+      (m) => !excluded.has(m.id) && (m.addedByYou || today.getTime() - new Date(m.postedAt).getTime() < MATCH_MAX_AGE_DAYS * DAY),
+    ),
+  ).filter((m, i) => i < MAX_MATCHES || m.addedByYou);
 }
 
-/** Outside Vercel, FUZZY_SAMPLE_JOBS=1 swaps the live boards for sample postings (for local testing). */
-async function loadJobs(boards: BoardRef[]): Promise<{ jobs: Job[]; errors: string[] }> {
-  if (!process.env.VERCEL && process.env.FUZZY_SAMPLE_JOBS === "1") return { jobs: sampleJobs(), errors: [] };
-  return fetchBoards(boards);
+type Pool = { boardJobs: Job[]; searchJobs: Map<string, Job[]>; errors: string[] };
+
+/**
+ * Fetch every board and search the seekers need, once each, in parallel.
+ * Outside Vercel, FUZZY_SAMPLE_JOBS=1 swaps everything for sample postings (for local testing).
+ */
+async function loadPool(seekers: Seeker[]): Promise<Pool> {
+  if (!process.env.VERCEL && process.env.FUZZY_SAMPLE_JOBS === "1") return { boardJobs: sampleJobs(), searchJobs: new Map(), errors: [] };
+  const on = searchSitesOn();
+  const [boards, search] = await Promise.all([
+    fetchBoards(boardsFor(seekers)),
+    on.adzuna || on.jooble ? runSearches(seekers.flatMap((s) => queriesFor(s.brief))) : Promise.resolve({ byQuery: new Map<string, Job[]>(), errors: [] }),
+  ]);
+  return { boardJobs: boards.jobs, searchJobs: search.byQuery, errors: [...boards.errors, ...search.errors] };
 }
 
 const key = (b: BoardRef) => `${b.source}:${b.board}`;
@@ -89,22 +117,24 @@ function boardsFor(seekers: Seeker[]): BoardRef[] {
   return [...boards.values()];
 }
 
-function jobsFor(seeker: Seeker, jobs: Job[]): Job[] {
+function jobsFor(seeker: Seeker, pool: Pool): Job[] {
   const mine = new Set([...STARTER_BOARDS, ...seeker.extraBoards].map(key));
-  return jobs.filter((j) => j.source === "sample" || mine.has(j.board));
+  const fromBoards = pool.boardJobs.filter((j) => j.source === "sample" || mine.has(j.board));
+  const fromSearch = queriesFor(seeker.brief).flatMap((q) => pool.searchJobs.get(queryKey(q)) ?? []);
+  return dedupe([...fromBoards, ...fromSearch]);
 }
 
 /**
- * The daily hunt for everyone. Each board is fetched once and shared
+ * The daily hunt for everyone. Each board and search is fetched once and shared
  * across seekers, so the run stays fast as the number of users grows.
  */
 export async function runDailyHunt(seekers: Seeker[], today = new Date()): Promise<Briefing[]> {
-  const { jobs, errors } = await loadJobs(boardsFor(seekers));
-  return seekers.map((s) => buildBriefing(s, jobsFor(s, jobs), today, errors));
+  const pool = await loadPool(seekers);
+  return seekers.map((s) => buildBriefing(s, jobsFor(s, pool), today, pool.errors));
 }
 
 /** One seeker's hunt, on demand (after onboarding, a brief change, or "Hunt now"). */
 export async function huntFor(seeker: Seeker, rescan: boolean, today = new Date()): Promise<Briefing> {
-  const { jobs, errors } = await loadJobs(boardsFor([seeker]));
-  return buildBriefing(seeker, jobsFor(seeker, jobs), today, errors, rescan);
+  const pool = await loadPool([seeker]);
+  return buildBriefing(seeker, jobsFor(seeker, pool), today, pool.errors, rescan);
 }

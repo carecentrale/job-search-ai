@@ -24,19 +24,48 @@ export type Job = {
   description: string;
   /** ISO date the posting was published or last updated. */
   postedAt: string;
-  source: "greenhouse" | "lever" | "sample";
+  source: "greenhouse" | "lever" | "ashby" | "recruitee" | "adzuna" | "jooble" | "link" | "sample";
   /** Which board it came from, e.g. "greenhouse:stripe". */
   board: string;
 };
 
 export type ScoredJob = Job & {
-  /** 0–100. */
+  /** 0–100, from keywords. */
   fit: number;
   /** Short, human reasons for the score. */
   reasons: string[];
   /** Things to check before applying, e.g. a stale posting. */
   warnings: string[];
+  /** The AI's read of this posting against the CV, once it has looked. */
+  review?: Review;
+  /** Set when the seeker added this posting themselves. */
+  addedByYou?: boolean;
 };
+
+/** The AI headhunter's recommendation. The seeker (or Autopilot) still decides. */
+export type Review = {
+  verdict: "recommend" | "maybe" | "skip";
+  /** 0–100, the AI's own fit score. */
+  fit: number;
+  /** One or two sentences on why. */
+  why: string;
+  /** What to check or what's missing. */
+  concerns: string[];
+  model: string;
+  at: string;
+};
+
+/** How much the headhunter may do on its own. */
+export type AgentSettings = {
+  /** Approve strong AI recommendations and write the documents without asking. Never submits. */
+  autopilot: boolean;
+  /** Only roles the AI scores at least this high. */
+  minFit: number;
+  /** At most this many new applications a day. */
+  perDay: number;
+};
+
+export const DEFAULT_AGENT: AgentSettings = { autopilot: false, minFit: 80, perDay: 2 };
 
 export type ApplicationStatus =
   | "preparing"
@@ -59,6 +88,8 @@ export type Application = {
   tailored?: Tailored;
   /** How many times Claude has written this one (capped, to keep costs predictable). */
   writes?: number;
+  /** Who said yes to this posting: the seeker, or Autopilot on their behalf. */
+  approvedBy?: "you" | "autopilot";
 };
 
 export type Tailored = {
