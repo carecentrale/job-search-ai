@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
@@ -12,6 +9,8 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // unpdf ships a large PDF.js build; keep it out of the bundle and load it at runtime.
+  serverExternalPackages: ["unpdf"],
 };
 
 export default nextConfig;

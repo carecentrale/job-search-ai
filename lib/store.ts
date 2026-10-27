@@ -1,35 +1,36 @@
-import type { Briefing, Seeker } from "./hunt/run";
+import { hasDb } from "./db";
+import { mergeMatches, type Briefing, type Seeker } from "./hunt/run";
 import { sampleApplications, sampleBrief } from "./hunt/sample";
+import * as seekers from "./seekers";
 
 /**
- * Where seekers and briefings live.
- *
- * Until the Railway database is connected, this returns one demo seeker and keeps
- * briefings in memory, so the daily run can be exercised end to end. When
- * DATABASE_URL is set up, these two functions switch to Prisma; nothing that
- * calls them needs to change.
+ * What the daily hunt reads and writes. Uses the database when DATABASE_URL is
+ * set; otherwise one demo seeker in memory, so the hunt can still be exercised.
  */
 
-const briefings = new Map<string, Briefing>();
+const demoBriefings = new Map<string, Briefing>();
 
 export async function listActiveSeekers(): Promise<Seeker[]> {
+  if (hasDb()) return seekers.listActiveSeekers();
   return [
     {
       id: "demo",
       brief: sampleBrief,
       extraBoards: [],
-      seenJobIds: [],
+      lastHuntAt: null,
       applications: sampleApplications(),
+      passed: [],
+      matches: [],
     },
   ];
 }
 
-export async function saveBriefing(b: Briefing): Promise<void> {
-  briefings.set(`${b.seekerId}:${b.date}`, b);
-}
-
-export async function latestBriefing(seekerId: string): Promise<Briefing | undefined> {
-  return [...briefings.values()]
-    .filter((b) => b.seekerId === seekerId)
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
+/** Save the briefing and fold its matches into the seeker's shortlist (or replace it, after the brief changes). */
+export async function recordBriefing(seeker: Seeker, b: Briefing, now = new Date(), replace = false): Promise<void> {
+  if (!hasDb()) {
+    demoBriefings.set(`${b.seekerId}:${b.date}`, b);
+    return;
+  }
+  await seekers.saveBriefing(b);
+  await seekers.updateSeeker(seeker.id, { matches: mergeMatches(seeker, b.newMatches, now, replace), lastHuntAt: now });
 }

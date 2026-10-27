@@ -55,4 +55,19 @@ export type Application = {
   lastFollowUpAt?: string;
   interviewAt?: string;
   note?: string;
+  /** The CV and cover letter Claude wrote for this posting. */
+  tailored?: Tailored;
+  /** How many times Claude has written this one (capped, to keep costs predictable). */
+  writes?: number;
+};
+
+export type Tailored = {
+  /** Markdown. */
+  cv: string;
+  /** Markdown. */
+  coverLetter: string;
+  /** What the posting asks for that the CV does not show. */
+  gaps: string[];
+  createdAt: string;
+  model: string;
 };

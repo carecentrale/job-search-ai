@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,8 +8,11 @@ export const metadata: Metadata = {
     "Your personal headhunter. fuzzyHR finds the roles worth your time, tailors your CV and cover letter for each, and keeps your search moving.",
 };
 
+/** Sign-up switches on once the Clerk keys are in Vercel; until then the site runs as a public demo. */
+const clerkOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return (
+  const page = (
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,5 +24,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>{children}</body>
     </html>
+  );
+  if (!clerkOn) return page;
+  return (
+    <ClerkProvider
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/app"
+      signUpFallbackRedirectUrl="/app"
+      afterSignOutUrl="/"
+      appearance={{
+        variables: {
+          colorPrimary: "#1c5b47",
+          fontFamily: '"Hanken Grotesk", "Segoe UI", system-ui, sans-serif',
+          borderRadius: "10px",
+        },
+      }}
+    >
+      {page}
+    </ClerkProvider>
   );
 }

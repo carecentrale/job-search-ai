@@ -1,314 +1,84 @@
 # fuzzyHR
 
-*Working name. Formerly Job Search AI.*
+*Working name.* Your personal headhunter: brief it once, and every morning it finds the roles worth your time, writes a CV and cover letter for each one you approve, and reminds you to follow up.
 
-An **open-source SaaS platform** that helps job seekers create tailored CVs and cover letters using AI. Built with Next.js, Clerk, Stripe, and Claude API.
-
-**Marketing tagline**: *"Simplify your job search with an AI-Powered Agent working for you. Test it free for 7 days."*
+Live at **https://fuzzyhr.vercel.app** · Built by [Nicola Delnero](https://linkedin.com/in/nicoladelnero) with Claude.
 
 ---
 
-## 🚀 Features
+## What it does
 
-### MVP (Phase 1)
-- ✅ User authentication via Clerk
-- ✅ CV upload & preview
-- ✅ Job description input
-- ✅ Mock AI-generated CV & cover letter
-- ✅ 3 design templates (Minimal, Bold, Elegant)
-- ✅ Design customization UI
-- ✅ PDF download functionality
-- ✅ User dashboard with generated materials
-- ✅ 7-day free trial system
-- ✅ Stripe integration (test mode)
+- **Brief.** A new user uploads their CV (PDF or text). Claude reads it and pre-fills a brief: roles they want, strengths, cities, and topics to always skip. They edit and save.
+- **Hunt.** Every morning at 7:00 Toronto time, and on demand, fuzzyHR pulls fresh postings from public company job boards, scores each against the brief and keeps a ranked shortlist with a plain reason for every pick. Stale postings are flagged; anything on the user's skip list is dropped.
+- **Tailor.** For each role the user approves, Claude rewrites the CV and writes a cover letter using **only facts in the CV**. Anything the posting asks for that the CV doesn't show is listed as a gap, never invented. Documents open in three templates (Minimal, Bold, Elegant) and save as PDF from the browser.
+- **Follow up.** A tracker (Preparing → Applied → Interviewing → Offer → Closed) with reminders: follow up 7 days after applying, prepare 2 days before an interview.
+- **Free week.** New accounts get 7 days and 5 tailored applications. Paid plans are not built yet.
 
-### Phase 2 (Roadmap)
-- Real Claude API integration for live generation
-- Streaming generation UI
-- Database persistence of generated materials
-- Billing/subscription enforcement
-- Rate limiting
+Signed-out visitors get a demo at `/app` with sample data.
 
-### Phase 3 (Future)
-- Interview prep resources
-- Job search tracking (integrated tracker)
-- Community templates
-- Analytics dashboard
+## Stack
 
----
+| Part | Choice |
+|---|---|
+| App | Next.js 16 (App Router), React 19, TypeScript |
+| Hosting and schedule | Vercel, with Vercel Cron for the morning hunt (`vercel.json`) |
+| Sign-in | Clerk (`proxy.ts`, `lib/auth.ts`) |
+| Database | Postgres via `DATABASE_URL` (Neon on Vercel), using the `postgres` client. Tables are created on first use (`lib/db.ts`). |
+| Writing | Claude via `@anthropic-ai/sdk` with structured JSON output (`lib/ai.ts`) |
+| Job postings | Public Greenhouse and Lever board APIs, free and keyless (`lib/hunt/sources.ts`) |
+| PDF CVs | `unpdf` text extraction |
 
-## 🕵️ How the daily hunt works
+The site degrades safely: with no keys set it runs as the public demo; each feature switches on when its key arrives.
 
-Every morning at 7:00 Toronto time, Vercel Cron calls `/api/cron/hunt` (see `vercel.json`).
+## Environment variables
 
-1. **Fetch** every company job board once: the starter list in `lib/hunt/boards.ts` plus any companies seekers add. Boards come from the public Greenhouse and Lever APIs (free, no key).
-2. **Score** each new posting against the seeker's brief (`lib/hunt/score.ts`): title match, skills from their CV, location or remote. Postings mentioning anything on their "never show me" list are dropped. Postings older than 30 days lose points and get a warning.
-3. **Remind** (`lib/hunt/followup.ts`): follow up 7 days after applying, prepare 2 days before an interview, finish applications left in "Preparing".
-4. **Save** one briefing per seeker (`lib/store.ts`), shown on the Today screen at `/app`.
+Set these in Vercel → Project → Settings → Environment Variables.
 
-Set `CRON_SECRET` in Vercel; the route refuses any request without it. Until the database is connected, `lib/store.ts` serves one demo seeker.
+| Name | Set by | What it does |
+|---|---|---|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Clerk integration | Turns on sign-up and sign-in |
+| `DATABASE_URL` | Neon integration | Turns on accounts and saved data |
+| `ANTHROPIC_API_KEY` | You, from console.anthropic.com | Turns on CV reading and writing |
+| `ANTHROPIC_MODEL` | Optional | Defaults to `claude-sonnet-5-5` |
+| `CRON_SECRET` | You, any long random string | Lets Vercel Cron run the morning hunt; every other caller is refused |
 
----
+Changes to environment variables apply on the next deploy.
 
-## 📋 Tech Stack
-
-- **Frontend**: Next.js 14 + React 18 + TypeScript
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Authentication**: Clerk (free tier)
-- **Database**: PostgreSQL + Prisma ORM
-- **Payments**: Stripe (test mode)
-- **Deployment**: Vercel
-- **AI**: Claude API (Phase 2)
-
----
-
-## 🔧 Local Development Setup
-
-### Prerequisites
-- Node.js 18+ and npm/yarn
-- PostgreSQL (local or Railway)
-- Clerk account (API keys)
-- Stripe account (test keys)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/carecentrale/job-search-ai.git
-   cd job-search-ai
-   npm install
-   ```
-
-2. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   ```
-   
-   Fill in the variables:
-   ```
-   DATABASE_URL=postgresql://user:password@localhost:5432/job_search_ai
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxx
-   CLERK_SECRET_KEY=sk_test_xxxxx
-   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxx
-   STRIPE_SECRET_KEY=sk_test_xxxxx
-   ```
-
-3. **Set up the database**
-   ```bash
-   npx prisma migrate dev --name init
-   npx prisma db seed
-   ```
-
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-   
-   Open [http://localhost:3000](http://localhost:3000)
-
----
-
-## 📁 Project Structure
+## Code map
 
 ```
-job-search-ai/
-├── app/                          # Next.js App Router
-│   ├── layout.tsx                # Root layout
-│   ├── page.tsx                  # Landing page
-│   ├── auth/
-│   │   ├── sign-in/page.tsx
-│   │   └── sign-up/page.tsx
-│   ├── dashboard/
-│   │   ├── page.tsx              # User dashboard
-│   │   └── [id]/page.tsx         # Application detail
-│   ├── onboarding/
-│   │   ├── cv-upload/page.tsx
-│   │   └── job-input/page.tsx
-│   ├── generate/
-│   │   ├── page.tsx
-│   │   └── [jobId]/page.tsx
-│   ├── templates/page.tsx        # Design templates
-│   ├── pricing/page.tsx
-│   └── api/
-│       ├── auth/[...auth]/
-│       ├── generate/route.ts
-│       ├── materials/route.ts
-│       ├── users/route.ts
-│       └── stripe/webhook/route.ts
-├── components/
-│   ├── ui/                       # Reusable shadcn components
-│   ├── Navbar.tsx
-│   ├── Footer.tsx
-│   └── ...
-├── lib/
-│   ├── auth.ts                   # Clerk setup
-│   ├── db.ts                     # Prisma client
-│   ├── stripe.ts                 # Stripe setup
-│   ├── types.ts                  # TypeScript types
-│   └── utils.ts
-├── public/
-│   ├── sample-cv.pdf
-│   └── ...
-├── prisma/
-│   └── schema.prisma             # Database schema
-├── styles/
-│   └── globals.css
-├── .env.example
-├── package.json
-├── tsconfig.json
-└── README.md
+app/
+  page.tsx                      Landing page
+  app/page.tsx                  Workspace: live if signed in, demo otherwise
+  app/doc/[id]/page.tsx         Tailored CV and cover letter, 3 templates, print to PDF
+  sign-in/, sign-up/            Clerk forms
+  api/me/...                    The signed-in user's workspace API
+    cv                          Upload CV, get a suggested brief
+    brief                       Save brief, rescan the last 3 weeks
+    hunt                        Hunt now (10-minute cooldown)
+    pass                        Never show a posting again
+    applications, [id], [id]/tailor
+  api/cron/hunt                 The morning hunt for every active user
+components/workspace/           Live.tsx, Demo.tsx, shared parts.tsx
+lib/
+  hunt/                         Scoring, sources, follow-up rules, sample data
+  ai.ts                         Claude prompts and schemas
+  db.ts, seekers.ts, store.ts   Database
+  auth.ts, api.ts               Who is calling, shared API helpers
+  markdown.ts                   Safe Markdown → HTML for documents
+scripts/build_preview.py        Builds the claude.ai preview from a static export
 ```
 
----
+## Run it locally
 
-## 🔐 Environment Variables
-
-### Database
-- `DATABASE_URL` - PostgreSQL connection string
-
-### Clerk (Authentication)
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Public key for Clerk
-- `CLERK_SECRET_KEY` - Secret key for Clerk
-- `NEXT_PUBLIC_CLERK_SIGN_IN_URL` - Sign-in page route
-- `NEXT_PUBLIC_CLERK_SIGN_UP_URL` - Sign-up page route
-- `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` - Redirect after sign-in
-- `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` - Redirect after sign-up
-
-### Stripe (Payments)
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Public key for Stripe
-- `STRIPE_SECRET_KEY` - Secret key for Stripe
-- `STRIPE_WEBHOOK_SECRET` - Webhook signing secret
-
-### Application
-- `NEXT_PUBLIC_APP_URL` - Base URL of the application
-
----
-
-## 📊 Database Schema
-
-### Users
-- User profile, Clerk integration
-- Trial dates, subscription status
-- Uploaded CV
-
-### Materials
-- Generated CVs and cover letters
-- Job descriptions, role info
-- Template used, creation dates
-
-### UserPreferences
-- Design template preferences
-- Color customization settings
-
-### DesignTemplates
-- Pre-built design templates (Minimal, Bold, Elegant)
-- CSS variables for customization
-
-### StripeEvents
-- Webhook event logging
-
----
-
-## 🧪 Testing
-
-### Run tests
 ```bash
-npm run test
+npm install
+cp .env.example .env.local   # fill in what you have
+npm run dev
 ```
 
-### Build for production
-```bash
-npm run build
-npm run start
-```
+Without Clerk keys you can still test the signed-in workspace locally: set `FUZZY_DEV_USER=me` (ignored on Vercel), `DATABASE_URL` to any Postgres, and `FUZZY_SAMPLE_JOBS=1` to use sample postings instead of live boards.
 
----
+## License
 
-## 🚀 Deployment
-
-### Deploy to Vercel
-
-1. Push code to GitHub
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. Connect GitHub repo to Vercel
-   - Go to [vercel.com](https://vercel.com)
-   - Import GitHub repository
-   - Add environment variables
-   - Deploy
-
-3. Set up Stripe webhooks
-   - Add Vercel deployment URL to Stripe webhook endpoints
-   - URL: `https://your-domain.vercel.app/api/stripe/webhook`
-
----
-
-## 💳 Stripe Setup (Test Mode)
-
-### Pricing Plans
-- **Free**: 7-day trial (limited generations)
-- **Pro**: $29/month (unlimited generations)
-- **Team**: $99/month (multiple users)
-
-### Test Credit Cards
-- Success: `4242 4242 4242 4242`
-- Decline: `4000 0000 0000 0002`
-
-[See Stripe test cards](https://stripe.com/docs/testing)
-
----
-
-## 🤝 Contributing
-
-This is an open-source project. Contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
-
----
-
-## 👨‍💻 Built By
-
-Created with ❤️ by [Nicola Delnero](https://linkedin.com/in/nicoladelnero) using Claude Code + AI.
-
----
-
-## 🐛 Issues & Support
-
-Found a bug? Have a suggestion? Open an issue on [GitHub Issues](https://github.com/carecentrale/job-search-ai/issues).
-
----
-
-## 📚 Resources
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Clerk Documentation](https://clerk.com/docs)
-- [Stripe Documentation](https://stripe.com/docs)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [Tailwind CSS](https://tailwindcss.com)
-
----
-
-## 🎯 Roadmap
-
-- [ ] MVP Launch (Phase 1)
-- [ ] Real Claude API integration (Phase 2)
-- [ ] Advanced analytics (Phase 3)
-- [ ] Community features (Phase 3)
-
----
-
-**Happy coding! 🚀**
+MIT. See [LICENSE](./LICENSE).

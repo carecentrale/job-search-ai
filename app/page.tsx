@@ -1,3 +1,4 @@
+import Link from "next/link";
 const work = [
   {
     verb: "Brief",
@@ -73,6 +74,9 @@ const faqs = [
   },
 ];
 
+/** Sign-up opens by itself once the Clerk keys and the database are set in Vercel. */
+const signupOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.DATABASE_URL);
+
 export default function Home() {
   return (
     <>
@@ -84,7 +88,14 @@ export default function Home() {
             <a href="#templates">Templates</a>
             <a href="#pricing">Pricing</a>
           </nav>
-          <a className="btn btn-small" href="/app">Try the demo</a>
+          {signupOn ? (
+            <>
+              <Link className="nav-signin" href="/sign-in">Sign in</Link>
+              <Link className="btn btn-small" href="/sign-up">Start free</Link>
+            </>
+          ) : (
+            <a className="btn btn-small" href="/app">Try the demo</a>
+          )}
         </div>
       </header>
 
@@ -98,10 +109,19 @@ export default function Home() {
               for each one, and keeps your search moving while you get on with your day.
             </p>
             <div className="hero-actions">
-              <a className="btn" href="/app">Try the demo</a>
-              <a className="link" href="#pricing">See pricing</a>
+              {signupOn ? (
+                <>
+                  <Link className="btn" href="/sign-up">Start your free week</Link>
+                  <a className="link" href="/app">Try the demo first</a>
+                </>
+              ) : (
+                <>
+                  <a className="btn" href="/app">Try the demo</a>
+                  <a className="link" href="#pricing">See pricing</a>
+                </>
+              )}
             </div>
-            <p className="fine">Early access. The demo is open now and sign-up opens soon.</p>
+            <p className="fine">{signupOn ? "7 days free. No card needed." : "Early access. The demo is open now and sign-up opens soon."}</p>
           </div>
 
           <aside className="briefing" aria-label="Example of a morning briefing from your headhunter">
@@ -204,7 +224,7 @@ export default function Home() {
           <div className="wrap">
             <div className="section-head">
               <h2 className="section-title">Cheaper than one lunch with a recruiter</h2>
-              <p>Sign-up opens soon, starting with a free week. Until then, try the demo.</p>
+              <p>{signupOn ? "Every plan starts with a free week. Keep it only if it earns its place in your search." : "Sign-up opens soon, starting with a free week. Until then, try the demo."}</p>
             </div>
             <div className="plans">
               {plans.map((p) => (
@@ -214,7 +234,9 @@ export default function Home() {
                   <ul>
                     {p.features.map((f) => <li key={f}>{f}</li>)}
                   </ul>
-                  <a className={p.featured ? "btn" : "btn btn-ghost"} href="/app">Try the demo</a>
+                  <Link className={p.featured ? "btn" : "btn btn-ghost"} href={signupOn ? "/sign-up" : "/app"}>
+                    {signupOn ? "Start your free week" : "Try the demo"}
+                  </Link>
                 </div>
               ))}
             </div>
