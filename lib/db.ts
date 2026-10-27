@@ -73,6 +73,7 @@ async function migrate(db: Sql): Promise<void> {
     )`;
   await db`create index if not exists activity_user_at on activity (user_id, at desc)`;
   await db`create index if not exists activity_at on activity (at desc)`;
+  await backfillActivity(db);
   await db`
     create table if not exists claude_usage (
       user_id       text not null,
@@ -83,6 +84,56 @@ async function migrate(db: Sql): Promise<void> {
       output_tokens bigint not null default 0,
       primary key (user_id, day, source)
     )`;
+}
+
+/**
+ * One time only: activity logging started after the first users joined, so rebuild
+ * their earlier history from what's saved (account, CV, brief, hunts, applications,
+ * documents). Every rebuilt event is marked `backfilled`; times are exact where saved,
+ * otherwise approximate.
+ */
+async function backfillActivity(db: Sql): Promise<void> {
+  await db`create table if not exists fuzzy_migrations (name text primary key, ran_at timestamptz not null default now())`;
+  const claimed = await db`insert into fuzzy_migrations (name) values ('activity_backfill_v1') on conflict do nothing returning name`;
+  if (claimed.length === 0) return;
+  // Only history from before real logging began.
+  const [{ cutoff }] = await db<{ cutoff: Date }[]>`select coalesce(min(at), now()) as cutoff from activity where not (detail ? 'backfilled')`;
+  await db.begin(async (tx) => {
+    await tx`
+      insert into activity (user_id, at, type, detail)
+      select user_id, created_at, 'signed_up', jsonb_build_object('email', email, 'backfilled', true)
+      from seekers where created_at < ${cutoff}
+        and not exists (select 1 from activity a where a.user_id = seekers.user_id and a.type = 'signed_up')`;
+    await tx`
+      insert into activity (user_id, at, type, detail)
+      select user_id, created_at + interval '1 second', 'cv_uploaded',
+        jsonb_build_object('format', 'unknown', 'chars', length(cv_text), 'backfilled', true, 'approxTime', true)
+      from seekers where cv_text is not null and created_at < ${cutoff}`;
+    await tx`
+      insert into activity (user_id, at, type, detail)
+      select user_id, created_at + interval '2 seconds', 'brief_saved',
+        jsonb_build_object('roles', brief -> 'targetTitles', 'strengths', jsonb_array_length(coalesce(brief -> 'skills', '[]'::jsonb)),
+          'cities', brief -> 'locations', 'remoteOk', brief -> 'remoteOk', 'avoid', brief -> 'avoid', 'backfilled', true, 'approxTime', true)
+      from seekers where jsonb_array_length(coalesce(brief -> 'targetTitles', '[]'::jsonb)) > 0 and created_at < ${cutoff}`;
+    await tx`
+      insert into activity (user_id, at, type, detail)
+      select user_id, created_at, 'hunt',
+        jsonb_build_object('trigger', 'unknown', 'read', data -> 'postingsRead', 'found', jsonb_array_length(coalesce(data -> 'newMatches', '[]'::jsonb)), 'backfilled', true)
+      from briefings where created_at < ${cutoff}`;
+    await tx`
+      insert into activity (user_id, at, type, detail)
+      select s.user_id, (a ->> 'createdAt')::timestamptz, 'application_created',
+        jsonb_build_object('company', a -> 'job' ->> 'company', 'title', a -> 'job' ->> 'title', 'fit', a -> 'job' -> 'fit', 'backfilled', true)
+      from seekers s, jsonb_array_elements(s.applications) a
+      where (a ->> 'createdAt')::timestamptz < ${cutoff}`;
+    await tx`
+      insert into activity (user_id, at, type, detail)
+      select s.user_id, (a -> 'tailored' ->> 'createdAt')::timestamptz, 'documents_written',
+        jsonb_build_object('company', a -> 'job' ->> 'company', 'title', a -> 'job' ->> 'title', 'model', a -> 'tailored' ->> 'model',
+          'provider', case when a -> 'tailored' ->> 'model' like 'gpt%' then 'openai' else 'anthropic' end, 'backfilled', true)
+      from seekers s, jsonb_array_elements(s.applications) a
+      where a ? 'tailored' and (a -> 'tailored' ->> 'createdAt')::timestamptz < ${cutoff}`;
+  });
 }
 
 export async function db(): Promise<Sql> {

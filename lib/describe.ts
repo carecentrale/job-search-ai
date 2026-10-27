@@ -26,11 +26,17 @@ export const ACTIVITY_LABEL: Record<string, string> = {
 };
 
 export function describe(type: string, d: D): string {
+  const text = describeEvent(type, d);
+  if (!d.backfilled) return text;
+  return `${text} (Rebuilt from saved data${d.approxTime ? ", time approximate" : ""}.)`;
+}
+
+function describeEvent(type: string, d: D): string {
   switch (type) {
     case "signed_up":
       return `Created an account${d.email ? ` (${s(d.email)})` : ""}.`;
     case "cv_uploaded":
-      return `Uploaded a CV as ${s(d.format)}, ${n(d.chars)} characters.${d.briefSuggested ? " AI pre-filled the brief." : ""}`;
+      return `Uploaded a CV${d.format && d.format !== "unknown" ? ` as ${s(d.format)}` : ""}, ${n(d.chars)} characters.${d.briefSuggested ? " AI pre-filled the brief." : ""}`;
     case "brief_saved": {
       const roles = Array.isArray(d.roles) ? (d.roles as string[]).join(", ") : "";
       const cities = Array.isArray(d.cities) && d.cities.length ? (d.cities as string[]).join(", ") : "no cities";
@@ -38,7 +44,7 @@ export function describe(type: string, d: D): string {
       return `Roles: ${roles || "none"}. ${n(d.strengths)} strengths, ${cities}${d.remoteOk ? ", remote OK" : ""}.${hunt ? ` Rescan read ${n(hunt.read)}, found ${n(hunt.found)}.` : ""}`;
     }
     case "hunt":
-      return `${d.trigger === "daily" ? "Morning hunt" : "Hunt now"}: read ${n(d.read)} new postings, found ${n(d.found)} matches.${d.boardErrors ? ` ${n(d.boardErrors)} boards failed.` : ""}`;
+      return `${d.trigger === "daily" ? "Morning hunt" : d.trigger === "manual" ? "Hunt now" : "Hunt"}: read ${n(d.read)} new postings, found ${n(d.found)} matches.${d.boardErrors ? ` ${n(d.boardErrors)} boards failed.` : ""}`;
     case "job_passed":
       return `Passed on ${s(d.title) || "a posting"}${at(d)}${d.fit ? ` (fit ${s(d.fit)})` : ""}.`;
     case "application_created":
@@ -50,7 +56,7 @@ export function describe(type: string, d: D): string {
     case "application_note":
       return `Updated ${s(d.company)}: ${d.note ? `note "${s(d.note)}"` : "no note"}${d.interviewAt ? `, interview ${s(d.interviewAt).slice(0, 10)}` : ""}.`;
     case "documents_written":
-      return `${provider(d.provider)} (${s(d.model)}) wrote the CV and letter for ${s(d.title)}${at(d)}, write #${n(d.write)}, on ${d.keySource === "own" ? "their own key" : "your key"}. ${n(d.inputTokens)} in / ${n(d.outputTokens)} out tokens.${d.gaps ? ` ${n(d.gaps)} gaps flagged.` : ""}`;
+      return `${provider(d.provider)} (${s(d.model)}) wrote the CV and letter for ${s(d.title)}${at(d)}${d.write ? `, write #${n(d.write)}` : ""}${d.keySource ? `, on ${d.keySource === "own" ? "their own key" : "your key"}` : ""}.${d.inputTokens ? ` ${n(d.inputTokens)} in / ${n(d.outputTokens)} out tokens.` : ""}${d.gaps ? ` ${n(d.gaps)} gaps flagged.` : ""}`;
     case "write_failed":
       return `Writing failed for ${s(d.company)} on ${d.keySource === "own" ? `their ${provider(d.provider)} key` : "your key"}${d.status ? ` (HTTP ${s(d.status)})` : ""}: ${s(d.message)}`;
     case "key_added":
