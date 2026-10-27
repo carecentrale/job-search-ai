@@ -1,5 +1,6 @@
 import "server-only";
-import { houseKeyAvailable, houseLLM, PROVIDER_NAME, userLLM, type ClaudeUse, type LLM } from "./ai";
+import { PROVIDER_NAME, userLLM, type ClaudeUse, type LLM } from "./ai";
+import { houseKeyAvailable, houseLLM } from "./house";
 import { ApiError } from "./errors";
 import { canStoreSecrets, decrypt } from "./crypto";
 import { db } from "./db";
@@ -9,7 +10,7 @@ import { hasOwnKey, trialStatus, type SeekerRecord } from "./seekers";
  * Who pays for an AI call, and whether it's allowed.
  *
  * - Own key: the user added their own Claude or OpenAI API key. Free and unlimited; they pay that provider directly.
- * - House key: fuzzyHR's ANTHROPIC_API_KEY, for the free week only, with two daily caps:
+ * - House key: fuzzyHR's own key (set in Admin, or ANTHROPIC_API_KEY in Vercel), for the free week only, with two daily caps:
  *     HOUSE_DAILY_LIMIT_PER_USER  Claude calls per user per day (default 10)
  *     HOUSE_DAILY_LIMIT_TOTAL     Claude calls across all users per day (default 200)
  *   Days run midnight to midnight, Eastern time.
@@ -42,7 +43,7 @@ export async function houseCallsToday(userId?: string): Promise<number> {
 }
 
 /** Pick the key for this user's next call, or explain why there isn't one. Does not count the call. */
-export function chooseClaude(s: SeekerRecord): Claude {
+export async function chooseClaude(s: SeekerRecord): Promise<Claude> {
   if (hasOwnKey(s)) {
     if (!canStoreSecrets()) throw new ApiError(503, "Saved AI keys are switched off on the server right now. Try again later.");
     let key: string;
@@ -53,7 +54,7 @@ export function chooseClaude(s: SeekerRecord): Claude {
     }
     return { source: "own", llm: userLLM(s.aiProvider ?? "anthropic", key, s.aiModel) };
   }
-  if (!houseKeyAvailable()) {
+  if (!(await houseKeyAvailable())) {
     throw new ApiError(
       402,
       "Free AI writing is switching on soon, and I've let the team know you're waiting. To use it right now, add your own Claude or OpenAI key under Plan. With your own key, fuzzyHR is free.",
@@ -63,7 +64,7 @@ export function chooseClaude(s: SeekerRecord): Claude {
   if (trialStatus(s).ended) {
     throw new ApiError(402, "Your free week has ended. Add your own Claude or OpenAI key under Plan to keep using fuzzyHR for free.");
   }
-  return { source: "house", llm: houseLLM() };
+  return { source: "house", llm: await houseLLM() };
 }
 
 /**

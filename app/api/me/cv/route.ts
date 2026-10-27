@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     let suggestedBrief: Brief | null = null;
     if (saved.brief.targetTitles.length === 0) {
       try {
-        const claude = chooseClaude(saved);
+        const claude = await chooseClaude(saved);
         await reserveCall(saved, claude);
         const out = await suggestBrief(claude.llm, text);
         await recordUse(saved, claude, out.use);

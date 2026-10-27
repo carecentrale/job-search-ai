@@ -1,6 +1,6 @@
 import "server-only";
 import { logActivity, logAiWanted, touchLastSeen } from "./activity";
-import { houseKeyAvailable } from "./ai";
+import { houseKeyAvailable } from "./house";
 import { currentCaller } from "./auth";
 import { houseCallsToday, limits } from "./claude";
 import { canStoreSecrets } from "./crypto";
@@ -62,7 +62,8 @@ export async function readJson<T>(req: Request): Promise<T> {
 export async function stateFor(s: SeekerRecord) {
   const own = hasOwnKey(s);
   const trial = trialStatus(s);
-  const house = houseKeyAvailable() && !trial.ended;
+  const houseOn = await houseKeyAvailable();
+  const house = houseOn && !trial.ended;
   return {
     brief: s.brief,
     cv: s.cvText ? { chars: s.cvText.length, preview: s.cvText.slice(0, 280) } : null,
@@ -80,9 +81,9 @@ export async function stateFor(s: SeekerRecord) {
     sources: { companies: STARTER_BOARDS.length, following: s.extraBoards, ...searchSitesOn() },
     trial,
     /** True when fuzzyHR's own AI key isn't set yet, so the workspace shows "coming soon" instead of the free week. */
-    houseOff: !houseKeyAvailable(),
+    houseOff: !houseOn,
     /** They've already asked to be told when free AI writing is on. */
-    aiRequested: !own && !houseKeyAvailable() ? await aiRequested(s.id) : false,
+    aiRequested: !own && !houseOn ? await aiRequested(s.id) : false,
     /** Can Claude write for this user right now (subject to daily caps on fuzzyHR's key)? */
     ai: own || house,
     claude: {
@@ -91,7 +92,7 @@ export async function stateFor(s: SeekerRecord) {
       provider: s.aiProvider,
       model: own ? s.aiModel : null,
       canSaveKey: canStoreSecrets(),
-      houseKeyAvailable: houseKeyAvailable(),
+      houseKeyAvailable: houseOn,
       usedToday: own ? null : await houseCallsToday(s.id),
       dailyLimit: own ? null : limits().perUser,
     },

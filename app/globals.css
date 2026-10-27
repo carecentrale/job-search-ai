@@ -631,3 +631,5 @@ a { color: inherit; }
 .key-alert form { margin-top: 10px; }
 .admin-link { position: relative; }
 .admin-dot { position: absolute; top: -3px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--warn); color: #fff; font-size: 0.68rem; font-weight: 700; line-height: 16px; text-align: center; }
+.ok-text { color: var(--accent); font-weight: 600; }
+.house-key-form { margin-top: 8px; }

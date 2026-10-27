@@ -35,7 +35,8 @@ export type ActivityType =
   | "page_view"
   | "ai_wanted"
   | "tester_changed"
-  | "fresh_free_week";
+  | "fresh_free_week"
+  | "house_key_changed";
 
 export async function logActivity(userId: string, type: ActivityType, detail: Record<string, unknown> = {}): Promise<void> {
   try {

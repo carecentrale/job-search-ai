@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { aiWaiting, listUsers, overview, requireAdmin, type WaitingRow } from "@/lib/admin";
-import { houseKeyAvailable } from "@/lib/ai";
-import { giveFreshFreeWeek } from "./actions";
+import HouseKeyForm from "@/components/admin/HouseKeyForm";
+import { houseKeyAvailable, houseKeyInfo } from "@/lib/house";
+import { giveFreshFreeWeek, removeHouseKeyAction } from "./actions";
 import { ACTIVITY_LABEL, ago, daysUntil, when } from "@/lib/describe";
 
 const fmt = (v: number | bigint | string) => Number(v).toLocaleString("en-CA");
@@ -17,13 +18,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   await requireAdmin();
   const { q = "" } = await searchParams;
   const [{ users: u, usage, daily, limits }, rows, waiting] = await Promise.all([overview(), listUsers(q), aiWaiting()]);
-  const keyOn = houseKeyAvailable();
+  const keyOn = await houseKeyAvailable();
+  const keyInfo = await houseKeyInfo();
   const capPct = limits.total ? Math.min(100, Math.round((usage.house_calls_today / limits.total) * 100)) : 0;
   const maxDay = Math.max(1, ...daily.map((d) => d.house + d.own));
 
   return (
     <div className="admin-stack">
       <KeyAlert keyOn={keyOn} waiting={waiting} />
+      <HouseKeyPanel info={keyInfo} />
       <section className="admin-stats" aria-label="Summary">
         <div className="stat"><span>{fmt(u.total)}</span>users<small>{fmt(u.new_7d)} new this week, {fmt(u.active_7d)} active</small></div>
         <div className="stat"><span>{fmt(u.onboarded)}</span>set up<small>CV and brief done</small></div>
@@ -150,10 +153,47 @@ function KeyAlert({ keyOn, waiting }: { keyOn: boolean; waiting: WaitingRow[] })
       <p className="small">{people} who {waiting.length === 1 ? "isn't a tester" : "aren't testers"} tried to use AI before it was switched on. They&apos;re waiting.</p>
       {list}
       <ol className="small key-alert-steps">
-        <li>At console.anthropic.com, add credit under Billing (leave auto-reload off to cap spending), then create a key under API Keys.</li>
-        <li>In Vercel, open fuzzyhr, then Environment Variables. Add <code>ANTHROPIC_API_KEY</code> with your key. Make sure <code>ENCRYPTION_KEY</code> and <code>CRON_SECRET</code> are there too.</li>
-        <li>Redeploy. This box then offers to give everyone waiting a fresh free week.</li>
+        <li>At console.anthropic.com, add credit under Billing (leave auto-reload off to cap spending), then create a key under API Keys. An OpenAI key works too.</li>
+        <li>Paste it under <strong>fuzzyHR&apos;s AI key</strong>, just below. It switches on within a minute, with no redeploy.</li>
+        <li>This box then offers to give everyone waiting a fresh free week.</li>
       </ol>
+    </section>
+  );
+}
+
+const PROVIDER_LABEL: Record<string, string> = { anthropic: "Anthropic (Claude)", openai: "OpenAI" };
+
+/** fuzzyHR's own AI key: set, replace or remove it here instead of in Vercel. */
+function HouseKeyPanel({ info }: { info: Awaited<ReturnType<typeof houseKeyInfo>> }) {
+  const a = info.active;
+  return (
+    <section className="panel" id="ai-key">
+      <div className="panel-head">
+        <h2>fuzzyHR&apos;s AI key</h2>
+        <p className="muted small">Pays for free-week users&apos; AI. Users with their own key never use it.</p>
+      </div>
+      {a ? (
+        <p>
+          <strong>On.</strong> Using your {PROVIDER_LABEL[a.provider]} key ending in <span className="mono">…{a.last4}</span>, writing with <span className="mono">{a.model}</span>
+          {a.source === "vercel" ? <>, from <code>ANTHROPIC_API_KEY</code> in Vercel. A key saved here takes priority.</> : <>, saved here{info.stored ? ` ${when(info.stored.setAt).replace(/\.$/, "")}` : ""}.</>}
+        </p>
+      ) : (
+        <p><strong>Off.</strong> Free-week users see &ldquo;free AI writing is switching on soon&rdquo;. Users with their own key aren&apos;t affected.</p>
+      )}
+      {info.unreadable && <p className="warn small">A key saved here can no longer be read, because the server&apos;s encryption secret changed. Paste it again.</p>}
+      {info.canSave ? (
+        <>
+          <HouseKeyForm replacing={Boolean(info.stored)} />
+          <p className="muted small">Checked with the provider before saving, stored encrypted, and never shown again, here or anywhere else. Tip: use prepaid credit with auto-reload off, so spending can&apos;t run past what you loaded.</p>
+          {info.stored && (
+            <form action={removeHouseKeyAction}>
+              <button className="textbtn small" type="submit">Remove the saved key{info.vercelKey ? " (the Vercel key takes over)" : " (free AI writing turns off)"}</button>
+            </form>
+          )}
+        </>
+      ) : (
+        <p className="warn small">The server has no encryption secret yet, so it can&apos;t store a key safely. This needs the Clerk sign-in integration connected in Vercel.</p>
+      )}
     </section>
   );
 }

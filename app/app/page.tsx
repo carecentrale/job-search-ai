@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import DemoLoader from "@/components/workspace/DemoLoader";
 import LiveWorkspace from "@/components/workspace/Live";
 import { adminCaller, aiWaiting } from "@/lib/admin";
-import { houseKeyAvailable } from "@/lib/ai";
+import { houseKeyAvailable } from "@/lib/house";
 import { clerkEnabled, currentCaller } from "@/lib/auth";
 import { hasDb } from "@/lib/db";
 
@@ -17,7 +17,7 @@ export default async function AppPage() {
   if (caller) {
     const isAdmin = Boolean(await adminCaller());
     // A dot on the Admin link when real users are waiting for free AI writing.
-    const adminAlert = isAdmin && !houseKeyAvailable() ? (await aiWaiting()).length : 0;
+    const adminAlert = isAdmin && !(await houseKeyAvailable()) ? (await aiWaiting()).length : 0;
     return <LiveWorkspace clerk={clerkEnabled()} isAdmin={isAdmin} adminAlert={adminAlert} />;
   }
   return <DemoLoader signUp={hasDb() && clerkEnabled()} />;

@@ -3,7 +3,7 @@ import type { Brief, Job, Review, ScoredJob, Tailored } from "./hunt/types";
 
 /**
  * Talking to the model. Two providers: Anthropic (Claude) and OpenAI.
- * Which key pays (the user's own, or fuzzyHR's ANTHROPIC_API_KEY) and whether
+ * Which key pays (the user's own, or fuzzyHR's own key) and whether
  * a call is allowed is decided in lib/claude.ts; this file only calls the APIs.
  */
 
@@ -29,11 +29,6 @@ export class ProviderError extends Error {
   constructor(public status: number, message: string, public code?: string) {
     super(message);
   }
-}
-
-/** True when fuzzyHR itself has a key to cover free-week users. */
-export function houseKeyAvailable(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
 /** Which provider a pasted key belongs to, from its prefix. */
@@ -68,11 +63,6 @@ function anthropicLLM(client: Anthropic): LLM {
   };
 }
 
-let house: LLM | null = null;
-export function houseLLM(): LLM {
-  if (!house) house = anthropicLLM(new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }));
-  return house;
-}
 
 /* ---------- OpenAI ---------- */
 

@@ -29,7 +29,7 @@ export function unreviewed(s: SeekerRecord) {
 export async function reviewPending(s: SeekerRecord, trigger: "auto" | "manual" | "daily"): Promise<{ seeker: SeekerRecord; reviewed: number }> {
   const todo = unreviewed(s).slice(0, REVIEW_BATCH);
   if (!todo.length || !s.cvText) return { seeker: s, reviewed: 0 };
-  const claude = chooseClaude(s);
+  const claude = await chooseClaude(s);
   await reserveCall(s, claude);
   let out;
   try {
@@ -100,7 +100,7 @@ export async function writeDocuments(s: SeekerRecord, appId: string, by: "you" |
   if (!app) throw new ApiError(404, "That application isn't in your tracker.");
   if (!s.cvText) throw new ApiError(409, "Add your CV first, under Your brief.");
 
-  const claude = chooseClaude(s);
+  const claude = await chooseClaude(s);
   if (claude.source === "house") {
     const trial = trialStatus(s);
     if (!app.tailored && trial.limit !== null && trial.used >= trial.limit) {

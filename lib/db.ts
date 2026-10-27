@@ -95,6 +95,13 @@ async function migrate(db: Sql): Promise<void> {
  * otherwise approximate.
  */
 async function backfillActivity(db: Sql): Promise<void> {
+  await db`
+    create table if not exists app_settings (
+      name       text primary key,
+      value      text not null,
+      updated_at timestamptz not null default now(),
+      updated_by text
+    )`;
   await db`create table if not exists fuzzy_migrations (name text primary key, ran_at timestamptz not null default now())`;
   const claimed = await db`insert into fuzzy_migrations (name) values ('activity_backfill_v1') on conflict do nothing returning name`;
   if (claimed.length === 0) return;

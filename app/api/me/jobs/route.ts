@@ -24,7 +24,7 @@ async function postingFor(s: SeekerRecord, url: string): Promise<{ job: Job; via
   if (ld && ld.description.length > 150) return { job: { ...ld, id: linkId(page.url), source: "link", board: "link" }, via: "page data" };
 
   // No structured data: let the AI read the page. This counts as one AI request.
-  const claude = chooseClaude(s);
+  const claude = await chooseClaude(s);
   await reserveCall(s, claude);
   let out;
   try {

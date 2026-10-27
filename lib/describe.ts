@@ -35,6 +35,7 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   ai_wanted: "Wanted AI (no key yet)",
   tester_changed: "Tester flag",
   fresh_free_week: "Fresh free week",
+  house_key_changed: "fuzzyHR's AI key",
 };
 
 export function describe(type: string, d: D): string {
@@ -103,6 +104,8 @@ function describeEvent(type: string, d: D): string {
       return `${d.tester ? "Marked as a tester" : "No longer a tester"} by ${s(d.by)}.`;
     case "fresh_free_week":
       return `Given a fresh 7-day free week by ${s(d.by)}.`;
+    case "house_key_changed":
+      return d.action === "set" ? "Set fuzzyHR's AI key. Free AI writing is on." : d.action === "removed" ? "Removed fuzzyHR's AI key. Free AI writing is off." : `Tried to set fuzzyHR's AI key: ${s(d.message)}`;
     case "data_exported":
       return "Downloaded a copy of their data.";
     case "account_deleted":

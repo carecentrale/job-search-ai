@@ -1,6 +1,6 @@
 import { agentPass } from "@/lib/agent";
 import { logActivity } from "@/lib/activity";
-import { hasDb } from "@/lib/db";
+import { db, hasDb } from "@/lib/db";
 import { getSeeker } from "@/lib/seekers";
 import { runDailyHunt } from "@/lib/hunt/run";
 import { listActiveSeekers, recordBriefing } from "@/lib/store";
@@ -16,12 +16,19 @@ export const maxDuration = 300;
  * Autopilot approves and writes for those who switched it on. Anyone it doesn't
  * reach gets their review when they next open the app.
  *
- * Vercel sends `Authorization: Bearer $CRON_SECRET`; anything else is refused.
+ * Who may start it:
+ * - With CRON_SECRET set in Vercel, only requests carrying it (Vercel Cron sends
+ *   `Authorization: Bearer $CRON_SECRET`), as often as they like.
+ * - Without it, anyone can call this URL, but the hunt runs at most once every
+ *   20 hours, so the most a stranger can do is start the day's hunt a little
+ *   early. Nothing is returned except counts.
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
-    return Response.json({ error: "Not authorised." }, { status: 401 });
+  if (secret) {
+    if (req.headers.get("authorization") !== `Bearer ${secret}`) return Response.json({ error: "Not authorised." }, { status: 401 });
+  } else if (!(await claimDailyRun())) {
+    return Response.json({ skipped: "The morning hunt already ran in the last 20 hours." });
   }
 
   const started = Date.now();
@@ -69,4 +76,17 @@ export async function GET(req: Request) {
     saveErrors: failed,
     tookMs: Date.now() - started,
   });
+}
+
+/** Atomically record this run, unless one already ran in the last 20 hours. */
+async function claimDailyRun(): Promise<boolean> {
+  if (!hasDb()) return true;
+  const sql = await db();
+  const now = new Date().toISOString();
+  const rows = await sql`
+    insert into app_settings (name, value, updated_by) values ('last_daily_hunt', ${now}, 'cron')
+    on conflict (name) do update set value = excluded.value, updated_at = now(), updated_by = 'cron'
+      where app_settings.updated_at < now() - interval '20 hours'
+    returning name`;
+  return rows.length > 0;
 }

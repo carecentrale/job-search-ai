@@ -41,20 +41,20 @@ Set these in Vercel → Project → Settings → Environment Variables.
 |---|---|---|
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Clerk integration | Turns on sign-up and sign-in |
 | `DATABASE_URL` | Neon integration | Turns on accounts and saved data |
-| `ENCRYPTION_KEY` | You, any long random string (16+ characters) | Lets users save their own Claude key, encrypted. Changing it later means users re-enter their keys. |
-| `ANTHROPIC_API_KEY` | You, from console.anthropic.com (optional) | fuzzyHR's own key, for free-week users without a key. Leave it out to run on users' keys only. |
+| `ENCRYPTION_KEY` | Optional | Encrypts saved AI keys. Without it, fuzzyHR derives one from `CLERK_SECRET_KEY`. If set later, keys saved before keep working. |
+| `ANTHROPIC_API_KEY` | Optional | Fallback for fuzzyHR's own AI key. Normally the owner pastes it in **Admin → fuzzyHR's AI key** instead, which takes priority. |
 | `HOUSE_DAILY_LIMIT_PER_USER` | Optional | Claude requests per free-week user per day on fuzzyHR's key (default 10) |
 | `HOUSE_DAILY_LIMIT_TOTAL` | Optional | Claude requests per day across all users on fuzzyHR's key (default 200). Your ceiling on spend. |
 | `ANTHROPIC_MODEL` | Optional | Claude model, defaults to `claude-sonnet-5-5` |
 | `OPENAI_MODEL` | Optional | Forces one model for OpenAI keys instead of picking the newest |
 | `ADMIN_EMAILS` | Optional | Extra way to grant `/admin`: comma-separated sign-in emails (admins are normally set in the database) |
-| `CRON_SECRET` | You, any long random string | Lets Vercel Cron run the morning hunt; every other caller is refused |
+| `CRON_SECRET` | Optional | Restricts the morning hunt URL to Vercel Cron. Without it, the hunt URL is public but runs at most once every 20 hours. |
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Optional, free at developer.adzuna.com | Adds Adzuna job search to the hunt |
 | `JOOBLE_API_KEY` | Optional, free at jooble.org/api/about | Adds Jooble job search to the hunt |
 
 ## Before fuzzyHR's own AI key is set
 
-`ANTHROPIC_API_KEY` can be left out while testing. Users then see "Free AI writing is switching on soon": hunting, matching and the tracker work, and anyone can add their own key. When someone tries an AI feature or presses Notify me, it's logged as `ai_wanted`. The admin overview turns that into a "Time to add your Anthropic key" alert, with a count on the workspace's Admin link. It ignores admins, and users marked as testers on their admin page. Once the key is added and deployed, the same box offers to give everyone waiting a fresh 7-day free week.
+fuzzyHR's own AI key can be left out while testing; the owner adds it later in Admin, with no Vercel changes. Users then see "Free AI writing is switching on soon": hunting, matching and the tracker work, and anyone can add their own key. When someone tries an AI feature or presses Notify me, it's logged as `ai_wanted`. The admin overview turns that into a "Time to add your Anthropic key" alert, with a count on the workspace's Admin link. It ignores admins, and users marked as testers on their admin page. Once the key is saved in Admin, the same box offers to give everyone waiting a fresh 7-day free week.
 
 ## How the hunt works
 
