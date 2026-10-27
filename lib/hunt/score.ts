@@ -60,7 +60,13 @@ export function scoreJob(brief: Brief, job: Job, today = new Date()): ScoredJob 
     : 0;
 
   const age = daysBetween(job.postedAt, today);
-  const raw = 100 * (0.45 * title.score + 0.35 * skillScore + 0.2 * loc.score);
+  // Score only on what the brief actually says: an empty strengths or cities list
+  // shouldn't count against every posting.
+  const parts: [number, number][] = [[0.45, title.score]];
+  if (brief.skills.length) parts.push([0.35, skillScore]);
+  if (brief.locations.length || brief.remoteOk) parts.push([0.2, loc.score]);
+  const weight = parts.reduce((n, [w]) => n + w, 0);
+  const raw = (100 * parts.reduce((n, [w, v]) => n + w * v, 0)) / weight;
   const fit = Math.max(0, Math.min(99, Math.round(raw - (age > STALE_AFTER_DAYS ? STALE_PENALTY : 0))));
 
   const reasons: string[] = [];
@@ -71,7 +77,9 @@ export function scoreJob(brief: Brief, job: Job, today = new Date()): ScoredJob 
   const warnings: string[] = [];
   if (age > STALE_AFTER_DAYS) warnings.push(`Posted ${age} days ago. It may already be filled.`);
   if (job.description.trim().length < 200) warnings.push("Very short posting. Details are thin.");
-  if (!loc.label) warnings.push(`Location is ${job.location || "not stated"}, outside your brief.`);
+  if (!loc.label && (brief.locations.length || brief.remoteOk)) {
+    warnings.push(`Location is ${job.location || "not stated"}, outside your brief.`);
+  }
 
   return { ...job, fit, reasons, warnings };
 }
