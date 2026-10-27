@@ -8,7 +8,8 @@ export const LEGAL = {
   operator: "Nicola Delnero",
   /** Law 25's "person in charge of the protection of personal information". */
   privacyOfficer: "Nicola Delnero",
-  contactEmail: "nick@nickwiz.com",
+  /** Public contact address. Empty until a dedicated one is set up; the pages then say it's coming soon. */
+  contactEmail: "",
   province: "Quebec",
   city: "Montreal",
   country: "Canada",

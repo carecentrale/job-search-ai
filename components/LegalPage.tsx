@@ -17,13 +17,19 @@ export default function LegalPage({ title, summary, children }: { title: string;
       </header>
       <main className="wrap legal">
         <h1>{title}</h1>
-        <p className="muted small">Effective {LEGAL.effective}. Questions: <a href={`mailto:${LEGAL.contactEmail}`}>{LEGAL.contactEmail}</a></p>
+        <p className="muted small">Effective {LEGAL.effective}.{LEGAL.contactEmail ? <> Questions: <ContactEmail /></> : null}</p>
         <div className="legal-summary">{summary}</div>
         <article className="legal-body">{children}</article>
       </main>
       <SiteFooter />
     </>
   );
+}
+
+/** The contact email as a link, or a placeholder until one is set in lib/legal.ts. */
+export function ContactEmail() {
+  if (!LEGAL.contactEmail) return <span>our contact email (coming soon; it will be posted here)</span>;
+  return <a href={`mailto:${LEGAL.contactEmail}`}>{LEGAL.contactEmail}</a>;
 }
 
 export function SiteFooter() {
@@ -34,7 +40,7 @@ export function SiteFooter() {
         <nav className="footer-links" aria-label="Legal">
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
-          <a href={`mailto:${LEGAL.contactEmail}`}>Contact</a>
+          {LEGAL.contactEmail ? <a href={`mailto:${LEGAL.contactEmail}`}>Contact</a> : null}
         </nav>
         <span>Built by Nicola Delnero with Claude</span>
       </div>

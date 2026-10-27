@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import LegalPage from "@/components/LegalPage";
+import LegalPage, { ContactEmail } from "@/components/LegalPage";
 import { LEGAL } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Privacy Policy · fuzzyHR", description: "What fuzzyHR collects, why, who it's shared with, and your rights." };
 
-const mail = <a href={`mailto:${LEGAL.contactEmail}`}>{LEGAL.contactEmail}</a>;
+const mail = <ContactEmail />;
 
 export default function Privacy() {
   return (
