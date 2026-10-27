@@ -12,7 +12,7 @@ Live at **https://fuzzyhr.vercel.app** · Built by [Nicola Delnero](https://link
 - **Hunt.** Every morning at 7:00 Toronto time, and on demand, fuzzyHR pulls fresh postings from public company job boards, scores each against the brief and keeps a ranked shortlist with a plain reason for every pick. Stale postings are flagged; anything on the user's skip list is dropped.
 - **Tailor.** For each role the user approves, Claude rewrites the CV and writes a cover letter using **only facts in the CV**. Anything the posting asks for that the CV doesn't show is listed as a gap, never invented. Documents open in three templates (Minimal, Bold, Elegant) and save as PDF from the browser.
 - **Follow up.** A tracker (Preparing → Applied → Interviewing → Offer → Closed) with reminders: follow up 7 days after applying, prepare 2 days before an interview.
-- **Free with your own key.** Users who add their own Claude API key use fuzzyHR free with no limits; Anthropic bills them directly. Keys are checked with Anthropic, stored encrypted (AES-256-GCM) and never sent back to the browser.
+- **Free with your own key.** Users who add their own Claude or OpenAI API key (Plan tab, or AI key and plan in the profile menu) use fuzzyHR free with no limits; their provider bills them directly. Keys are recognised by prefix, checked with the provider, stored encrypted (AES-256-GCM) and never sent back to the browser. For OpenAI keys, fuzzyHR picks the newest general GPT model the key can use.
 - **Free week on us.** Without a key, new accounts get 7 days and 5 tailored applications on fuzzyHR's key, within daily caps per user and overall. Paid plans are not built yet.
 
 Signed-out visitors get a demo at `/app` with sample data.
@@ -43,7 +43,8 @@ Set these in Vercel → Project → Settings → Environment Variables.
 | `ANTHROPIC_API_KEY` | You, from console.anthropic.com (optional) | fuzzyHR's own key, for free-week users without a key. Leave it out to run on users' keys only. |
 | `HOUSE_DAILY_LIMIT_PER_USER` | Optional | Claude requests per free-week user per day on fuzzyHR's key (default 10) |
 | `HOUSE_DAILY_LIMIT_TOTAL` | Optional | Claude requests per day across all users on fuzzyHR's key (default 200). Your ceiling on spend. |
-| `ANTHROPIC_MODEL` | Optional | Defaults to `claude-sonnet-5-5` |
+| `ANTHROPIC_MODEL` | Optional | Claude model, defaults to `claude-sonnet-5-5` |
+| `OPENAI_MODEL` | Optional | Forces one model for OpenAI keys instead of picking the newest |
 | `CRON_SECRET` | You, any long random string | Lets Vercel Cron run the morning hunt; every other caller is refused |
 
 Changes to environment variables apply on the next deploy.
@@ -67,7 +68,7 @@ app/
 components/workspace/           Live.tsx, Demo.tsx, shared parts.tsx
 lib/
   hunt/                         Scoring, sources, follow-up rules, sample data
-  ai.ts                         Claude prompts and schemas
+  ai.ts                         Prompts, schemas, Claude and OpenAI clients, model picking
   claude.ts                     Which key pays, daily caps, usage tracking
   crypto.ts                     Encryption for saved keys
   db.ts, seekers.ts, store.ts   Database

@@ -1,3 +1,4 @@
+import type { Provider } from "./ai";
 import { db } from "./db";
 import type { Briefing, Seeker } from "./hunt/run";
 import type { BoardRef } from "./hunt/sources";
@@ -18,6 +19,9 @@ export type SeekerRecord = Seeker & {
   /** Their own Claude key, encrypted. Server-side only: never send this to the browser. */
   claudeKeyEnc: string | null;
   claudeKeyLast4: string | null;
+  /** Which provider their own key belongs to, and the model chosen for it. */
+  aiProvider: Provider | null;
+  aiModel: string | null;
 };
 
 type Row = {
@@ -35,6 +39,8 @@ type Row = {
   created_at: Date;
   claude_key_enc: string | null;
   claude_key_last4: string | null;
+  ai_provider: Provider | null;
+  ai_model: string | null;
 };
 
 const EMPTY_BRIEF: Brief = { name: "", targetTitles: [], skills: [], locations: [], remoteOk: true, avoid: [] };
@@ -55,6 +61,8 @@ function toRecord(r: Row): SeekerRecord {
     createdAt: r.created_at.toISOString(),
     claudeKeyEnc: r.claude_key_enc,
     claudeKeyLast4: r.claude_key_last4,
+    aiProvider: r.claude_key_enc ? (r.ai_provider ?? "anthropic") : null,
+    aiModel: r.ai_model,
   };
 }
 
@@ -108,7 +116,7 @@ type Patch = Partial<{
   matches: ScoredJob[];
   lastHuntAt: Date;
   /** Encrypted key and its last 4 characters, or null to remove. */
-  claudeKey: { enc: string; last4: string } | null;
+  claudeKey: { enc: string; last4: string; provider: Provider; model: string } | null;
 }>;
 
 /** Update only the fields given. */
@@ -125,6 +133,8 @@ export async function updateSeeker(userId: string, p: Patch): Promise<SeekerReco
     set.claude_key_enc = p.claudeKey?.enc ?? null;
     set.claude_key_last4 = p.claudeKey?.last4 ?? null;
     set.claude_key_added_at = p.claudeKey ? new Date() : null;
+    set.ai_provider = p.claudeKey?.provider ?? null;
+    set.ai_model = p.claudeKey?.model ?? null;
   }
   const rows = await sql<Row[]>`update seekers set ${sql(set)} where user_id = ${userId} returning *`;
   if (!rows[0]) throw new Error(`No seeker ${userId}`);

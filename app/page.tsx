@@ -34,10 +34,10 @@ const plans = [
     price: "$0",
     period: "for good",
     features: [
-      "Bring your own Claude API key",
+      "Bring your own Claude or OpenAI API key",
       "Unlimited tailored CVs and cover letters",
       "Daily hunting, shortlist and follow-up reminders",
-      "You pay Anthropic directly for what Claude writes",
+      "You pay Anthropic or OpenAI directly for the writing",
     ],
     cta: "Start free",
     soon: false,
@@ -66,11 +66,11 @@ const plans = [
 const faqs = [
   {
     q: "How can it be free?",
-    a: "fuzzyHR's hunting, shortlists and tracker cost very little to run. The expensive part is Claude writing your CV and cover letters. Add your own Claude API key and that bill goes to your Anthropic account instead, so fuzzyHR costs you nothing. Without a key, you get a free week with Claude on us.",
+    a: "fuzzyHR's hunting, shortlists and tracker cost very little to run. The expensive part is the AI writing your CV and cover letters. Add your own Claude or OpenAI API key and that bill goes to your own account instead, so fuzzyHR costs you nothing. Without a key, you get a free week with the writing on us.",
   },
   {
-    q: "What's a Claude API key, and is mine safe?",
-    a: "It's a password-like key from console.anthropic.com that lets an app use Claude on your Anthropic account. fuzzyHR checks it with Anthropic, stores it encrypted, uses it only to write your own documents, and never shows it again. You can remove it at any time, and set a monthly spend limit for it in the Anthropic console.",
+    q: "What's an API key, and is mine safe?",
+    a: "It's a password-like key that lets an app use Claude or ChatGPT's models on your own account. Get one at console.anthropic.com (Claude) or platform.openai.com (OpenAI), then add it under Plan in fuzzyHR. It's checked before saving, stored encrypted, used only to write your own documents, and never shown again. You can remove it any time, and set a monthly spending limit with your provider.",
   },
   {
     q: "Does it apply to jobs for me?",
@@ -137,7 +137,7 @@ export default function Home() {
                 </>
               )}
             </div>
-            <p className="fine">{signupOn ? "Free with your own Claude key, or 7 days on us. No card needed." : "Early access. The demo is open now and sign-up opens soon."}</p>
+            <p className="fine">{signupOn ? "Free with your own Claude or OpenAI key, or 7 days on us. No card needed." : "Early access. The demo is open now and sign-up opens soon."}</p>
           </div>
 
           <aside className="briefing" aria-label="Example of a morning briefing from your headhunter">
@@ -240,7 +240,7 @@ export default function Home() {
           <div className="wrap">
             <div className="section-head">
               <h2 className="section-title">Free, if you bring your own key</h2>
-              <p>{signupOn ? "Add your own Claude API key and fuzzyHR costs nothing, with no limits. No key? Start with a free week on us." : "Sign-up opens soon. Until then, try the demo."}</p>
+              <p>{signupOn ? "Add your own Claude or OpenAI API key and fuzzyHR costs nothing, with no limits. No key? Start with a free week on us." : "Sign-up opens soon. Until then, try the demo."}</p>
             </div>
             <div className="plans">
               {plans.map((p) => (

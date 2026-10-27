@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       try {
         const claude = chooseClaude(saved);
         await reserveCall(saved, claude);
-        const out = await suggestBrief(claude.client, text);
+        const out = await suggestBrief(claude.llm, text);
         await recordUse(saved, claude, out.use);
         suggestedBrief = out.data;
       } catch (e) {

@@ -53,6 +53,8 @@ export async function stateFor(s: SeekerRecord) {
     claude: {
       mode: own ? ("own" as const) : house ? ("house" as const) : ("none" as const),
       keyLast4: s.claudeKeyLast4,
+      provider: s.aiProvider,
+      model: own ? s.aiModel : null,
       canSaveKey: canStoreSecrets(),
       houseKeyAvailable: houseKeyAvailable(),
       usedToday: own ? null : await houseCallsToday(s.id),

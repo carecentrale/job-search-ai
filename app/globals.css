@@ -490,3 +490,7 @@ a { color: inherit; }
 .trial-bar .textbtn { margin-left: 2px; }
 .btn-disabled { opacity: 0.55; cursor: default; text-align: center; }
 .btn-disabled:hover { transform: none; }
+.key-pill { background: var(--hero-btn); border-color: var(--hero-btn); color: var(--hero-btn-ink); margin-right: 12px; }
+.ws-user { gap: 0; }
+.key-get { display: flex; gap: 8px; flex-wrap: wrap; }
+.key-detected { color: var(--accent); font-weight: 600; }

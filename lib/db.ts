@@ -54,6 +54,8 @@ async function migrate(db: Sql): Promise<void> {
   await db`alter table seekers add column if not exists claude_key_enc text`;
   await db`alter table seekers add column if not exists claude_key_last4 text`;
   await db`alter table seekers add column if not exists claude_key_added_at timestamptz`;
+  await db`alter table seekers add column if not exists ai_provider text`;
+  await db`alter table seekers add column if not exists ai_model text`;
   await db`
     create table if not exists claude_usage (
       user_id       text not null,

@@ -20,17 +20,17 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     if (claude.source === "house") {
       const trial = trialStatus(s);
       if (!app.tailored && trial.limit !== null && trial.used >= trial.limit) {
-        throw new ApiError(402, `You've used all ${trial.limit} tailored applications in your free week. Add your own Claude key under Plan to keep going for free.`);
+        throw new ApiError(402, `You've used all ${trial.limit} tailored applications in your free week. Add your own Claude or OpenAI key under Plan to keep going for free.`);
       }
       if ((app.writes ?? 0) >= MAX_WRITES_PER_APPLICATION) {
-        throw new ApiError(429, `I've written this one ${MAX_WRITES_PER_APPLICATION} times, the free-week limit. Add your own Claude key under Plan to rewrite it again.`);
+        throw new ApiError(429, `I've written this one ${MAX_WRITES_PER_APPLICATION} times, the free-week limit. Add your own Claude or OpenAI key under Plan to rewrite it again.`);
       }
     }
     await reserveCall(s, claude);
 
     let out;
     try {
-      out = await tailorApplication(claude.client, s.cvText, s.brief, app.job);
+      out = await tailorApplication(claude.llm, s.cvText, s.brief, app.job);
     } catch (e) {
       console.error("tailor failed", (e as { status?: number }).status, (e as Error).message);
       throw claudeError(e, claude);

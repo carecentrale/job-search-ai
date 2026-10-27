@@ -1,15 +1,14 @@
 import "server-only";
-import type Anthropic from "@anthropic-ai/sdk";
-import { clientFor, houseClient, houseKeyAvailable, type ClaudeUse } from "./ai";
+import { houseKeyAvailable, houseLLM, PROVIDER_NAME, userLLM, type ClaudeUse, type LLM } from "./ai";
 import { ApiError } from "./errors";
 import { canStoreSecrets, decrypt } from "./crypto";
 import { db } from "./db";
 import { hasOwnKey, trialStatus, type SeekerRecord } from "./seekers";
 
 /**
- * Who pays for a Claude call, and whether it's allowed.
+ * Who pays for an AI call, and whether it's allowed.
  *
- * - Own key: the user added their Claude API key. Free and unlimited; they pay Anthropic directly.
+ * - Own key: the user added their own Claude or OpenAI API key. Free and unlimited; they pay that provider directly.
  * - House key: fuzzyHR's ANTHROPIC_API_KEY, for the free week only, with two daily caps:
  *     HOUSE_DAILY_LIMIT_PER_USER  Claude calls per user per day (default 10)
  *     HOUSE_DAILY_LIMIT_TOTAL     Claude calls across all users per day (default 200)
@@ -17,7 +16,7 @@ import { hasOwnKey, trialStatus, type SeekerRecord } from "./seekers";
  */
 
 export type Source = "own" | "house";
-export type Claude = { source: Source; client: Anthropic };
+export type Claude = { source: Source; llm: LLM };
 
 const num = (v: string | undefined, d: number) => {
   const n = Number.parseInt(v ?? "", 10);
@@ -45,18 +44,20 @@ export async function houseCallsToday(userId?: string): Promise<number> {
 /** Pick the key for this user's next call, or explain why there isn't one. Does not count the call. */
 export function chooseClaude(s: SeekerRecord): Claude {
   if (hasOwnKey(s)) {
-    if (!canStoreSecrets()) throw new ApiError(503, "Saved Claude keys are switched off on the server right now. Try again later.");
+    if (!canStoreSecrets()) throw new ApiError(503, "Saved AI keys are switched off on the server right now. Try again later.");
+    let key: string;
     try {
-      return { source: "own", client: clientFor(decrypt(s.claudeKeyEnc!)) };
+      key = decrypt(s.claudeKeyEnc!);
     } catch {
-      throw new ApiError(409, "I couldn't read your saved Claude key. Add it again under Plan.");
+      throw new ApiError(409, "I couldn't read your saved AI key. Add it again under Plan.");
     }
+    return { source: "own", llm: userLLM(s.aiProvider ?? "anthropic", key, s.aiModel) };
   }
-  if (!houseKeyAvailable()) throw new ApiError(402, "Add your Claude API key under Plan to switch on writing. With your own key, fuzzyHR is free.");
+  if (!houseKeyAvailable()) throw new ApiError(402, "Add your Claude or OpenAI key under Plan to switch on writing. With your own key, fuzzyHR is free.");
   if (trialStatus(s).ended) {
-    throw new ApiError(402, "Your free week has ended. Add your own Claude key under Plan to keep using fuzzyHR for free.");
+    throw new ApiError(402, "Your free week has ended. Add your own Claude or OpenAI key under Plan to keep using fuzzyHR for free.");
   }
-  return { source: "house", client: houseClient() };
+  return { source: "house", llm: houseLLM() };
 }
 
 /**
@@ -67,7 +68,7 @@ export async function reserveCall(s: SeekerRecord, c: Claude): Promise<void> {
   if (c.source !== "house") return;
   const { perUser, total } = limits();
   if ((await houseCallsToday()) >= total) {
-    throw new ApiError(503, "fuzzyHR's free writing is at capacity for today. Add your own Claude key under Plan to keep going, or try again tomorrow.");
+    throw new ApiError(503, "fuzzyHR's free writing is at capacity for today. Add your own Claude or OpenAI key under Plan to keep going, or try again tomorrow.");
   }
   const sql = await db();
   const rows = await sql`
@@ -76,7 +77,7 @@ export async function reserveCall(s: SeekerRecord, c: Claude): Promise<void> {
       where claude_usage.calls < ${perUser}
     returning calls`;
   if (rows.length === 0 || perUser === 0) {
-    throw new ApiError(429, `You've used today's ${perUser} free writing requests. They reset at midnight Eastern, or add your own Claude key under Plan for no limits.`);
+    throw new ApiError(429, `You've used today's ${perUser} free writing requests. They reset at midnight Eastern, or add your own Claude or OpenAI key under Plan for no limits.`);
   }
 }
 
@@ -99,15 +100,21 @@ export async function recordUse(s: SeekerRecord, c: Claude, use: ClaudeUse): Pro
   }
 }
 
-/** Turn an Anthropic error into a message the user can act on. */
+/** Turn a provider error into a message the user can act on. */
 export function claudeError(e: unknown, c: Claude): ApiError {
   const status = (e as { status?: number }).status;
+  const code = (e as { code?: string }).code;
   const msg = String((e as { message?: string }).message ?? "");
+  const who = PROVIDER_NAME[c.llm.provider];
+  const console_ = c.llm.provider === "openai" ? "platform.openai.com" : "console.anthropic.com";
   if (c.source === "own") {
-    if (status === 401 || status === 403) return new ApiError(422, "Anthropic refused your Claude key. Check or replace it under Plan.");
-    if (/credit balance/i.test(msg)) return new ApiError(402, "Your Anthropic account is out of credit. Top it up at console.anthropic.com, then try again.");
-    if (status === 429) return new ApiError(429, "Your Anthropic account hit its rate limit. Wait a minute and try again.");
+    if (status === 401 || status === 403) return new ApiError(422, `${who} refused your key. Check or replace it under Plan.`);
+    if (/credit balance/i.test(msg) || code === "insufficient_quota") {
+      return new ApiError(402, `Your ${who} account is out of credit. Top it up at ${console_}, then try again.`);
+    }
+    if (status === 429) return new ApiError(429, `Your ${who} account hit its rate limit. Wait a minute and try again.`);
+    if (status === 404) return new ApiError(422, `Your ${who} key can't use the model ${c.llm.model}. Remove the key and add it again so I can pick another.`);
   }
-  if (status === 529 || status === 503) return new ApiError(503, "Claude is busy right now. Try again in a minute.");
-  return new ApiError(502, "Claude couldn't finish this one. Try again in a minute.");
+  if (status === 529 || status === 503) return new ApiError(503, "The AI is busy right now. Try again in a minute.");
+  return new ApiError(502, "The AI couldn't finish this one. Try again in a minute.");
 }

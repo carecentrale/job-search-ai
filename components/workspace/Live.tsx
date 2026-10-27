@@ -113,14 +113,19 @@ export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
 
   return (
     <div className="ws">
-      <Top clerk={clerk} tabs={state.onboarded ? { tab, setTab, shortlist: state.matches.length } : undefined} />
+      <Top
+        clerk={clerk}
+        tabs={state.onboarded ? { tab, setTab, shortlist: state.matches.length } : undefined}
+        onPlan={() => setTab("plan")}
+        needsKey={state.claude.mode !== "own" && state.claude.canSaveKey && tab !== "plan"}
+      />
 
       <div className="wrap trial-bar">
         {state.claude.mode === "own" ? (
-          <span className="muted">Free with your own Claude key. No limits.</span>
+          <span className="muted">Free with your own {state.claude.provider === "openai" ? "OpenAI" : "Claude"} key. No limits.</span>
         ) : trial.ended || state.claude.mode === "none" ? (
           <span className="warn">
-            {trial.ended ? "Your free week has ended. " : ""}Add your own Claude key to use fuzzyHR for free.{" "}
+            {trial.ended ? "Your free week has ended. " : ""}Add your own Claude or OpenAI key to use fuzzyHR for free.{" "}
             <button className="textbtn small" onClick={() => setTab("plan")}>Add your key</button>
           </span>
         ) : (
@@ -234,7 +239,7 @@ export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
                                 {busy === `tailor:${a.id}` ? "Writing… about 30 seconds" : "Write my CV and letter"}
                               </button>
                             ) : (
-                              <button className="textbtn small" onClick={() => setTab("plan")}>Add your Claude key to write this</button>
+                              <button className="textbtn small" onClick={() => setTab("plan")}>Add your AI key to write this</button>
                             )}
                           </AppCard>
                         ))}
@@ -283,7 +288,17 @@ function todayLine(s: WorkspaceState) {
   return `I read ${b.postingsRead} new posting${b.postingsRead === 1 ? "" : "s"} ${when}. ${count}`;
 }
 
-function Top({ clerk, tabs }: { clerk: boolean; tabs?: { tab: Tab; setTab: (t: Tab) => void; shortlist: number } }) {
+function Top({
+  clerk,
+  tabs,
+  onPlan,
+  needsKey,
+}: {
+  clerk: boolean;
+  tabs?: { tab: Tab; setTab: (t: Tab) => void; shortlist: number };
+  onPlan?: () => void;
+  needsKey?: boolean;
+}) {
   return (
     <header className="ws-top">
       <div className="wrap ws-top-inner">
@@ -307,7 +322,16 @@ function Top({ clerk, tabs }: { clerk: boolean; tabs?: { tab: Tab; setTab: (t: T
         )}
         {clerk && (
           <div className="ws-user">
-            <UserButton />
+            {needsKey && onPlan && (
+              <button className="btn btn-small key-pill" onClick={onPlan}>Add AI key</button>
+            )}
+            <UserButton>
+              {onPlan && (
+                <UserButton.MenuItems>
+                  <UserButton.Action label="AI key and plan" labelIcon={<KeyIcon />} onClick={onPlan} />
+                </UserButton.MenuItems>
+              )}
+            </UserButton>
           </div>
         )}
       </div>
@@ -404,6 +428,27 @@ function Onboarding({
   );
 }
 
+const KEY_LINKS = {
+  anthropic: "https://console.anthropic.com/settings/keys",
+  openai: "https://platform.openai.com/api-keys",
+};
+
+function detectProvider(key: string): "anthropic" | "openai" | null {
+  const k = key.trim();
+  if (k.startsWith("sk-ant-")) return "anthropic";
+  if (k.startsWith("sk-")) return "openai";
+  return null;
+}
+
+function KeyIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="7.5" cy="15.5" r="4.5" />
+      <path d="M10.7 12.3 20 3M16 7l3 3M14 9l2 2" />
+    </svg>
+  );
+}
+
 function PlanPanel({
   state,
   busy,
@@ -419,6 +464,8 @@ function PlanPanel({
 }) {
   const [key, setKey] = useState("");
   const c = state.claude;
+  const detected = detectProvider(key);
+  const ownName = c.provider === "openai" ? "OpenAI" : "Anthropic";
   return (
     <section className="plan-page">
       <div className="panel">
@@ -427,26 +474,29 @@ function PlanPanel({
           {!state.onboarded && <button className="textbtn small" onClick={onBack}>Back to setup</button>}
         </div>
         {c.mode === "own" ? (
-          <p>You&apos;re on <strong>Free with your own key</strong>. Hunting, shortlists, reminders and unlimited CVs and cover letters, at no charge from fuzzyHR. Anthropic bills your account for what Claude writes.</p>
+          <p>You&apos;re on <strong>Free with your own key</strong>: hunting, shortlists, reminders and unlimited CVs and cover letters, at no charge from fuzzyHR. {ownName} bills your account for the writing.</p>
         ) : state.trial.ended ? (
-          <p>Your free week has ended. Add your own Claude key below and fuzzyHR stays free, with no limits. Everything you made is still here.</p>
+          <p>Your free week has ended. Add your own Claude or OpenAI key below and fuzzyHR stays free, with no limits. Everything you made is still here.</p>
         ) : c.houseKeyAvailable ? (
           <>
-            <p>You&apos;re on the <strong>free week</strong>, with Claude on us: {state.trial.daysLeft} day{state.trial.daysLeft === 1 ? "" : "s"} left, {state.trial.used} of {state.trial.limit} tailored applications used.</p>
+            <p>You&apos;re on the <strong>free week</strong>, with the writing on us: {state.trial.daysLeft} day{state.trial.daysLeft === 1 ? "" : "s"} left, {state.trial.used} of {state.trial.limit} tailored applications used.</p>
             <p className="muted small">Today: {c.usedToday} of {c.dailyLimit} writing requests used. They reset at midnight Eastern.</p>
           </>
         ) : (
-          <p>Add your own Claude key to switch on writing. With your own key, fuzzyHR is free.</p>
+          <p>Add your own Claude or OpenAI key to switch on writing. With your own key, fuzzyHR is free.</p>
         )}
       </div>
 
       <div className="panel key-panel">
-        <h2>Your Claude API key</h2>
+        <h2>Your AI key</h2>
         {c.keyLast4 ? (
           <>
-            <p>Saved key ending in <strong className="mono">…{c.keyLast4}</strong>. It&apos;s encrypted, used only to write your own documents, and never shown again, not even to you.</p>
+            <p>
+              Saved {ownName} key ending in <strong className="mono">…{c.keyLast4}</strong>
+              {c.model ? <>, writing with <span className="mono">{c.model}</span></> : null}. It&apos;s encrypted, used only to write your own documents, and never shown again, not even to you.
+            </p>
             <div><button className="btn btn-small btn-ghost" disabled={busy} onClick={onRemove}>{busy ? "Removing…" : "Remove key"}</button></div>
-            <p className="muted small">To switch keys, remove this one and add the new one.</p>
+            <p className="muted small">To switch keys or providers, remove this one and add the new one.</p>
           </>
         ) : !c.canSaveKey ? (
           <p className="muted">Saving keys is switched off on the server right now. Check back soon.</p>
@@ -460,14 +510,20 @@ function PlanPanel({
             }}
           >
             <p className="muted">
-              Add your key and fuzzyHR is free, with no daily or free-week limits. You pay Anthropic directly for what Claude writes for you.
+              Add a Claude or OpenAI API key and fuzzyHR is free, with no daily or free-week limits. You pay Anthropic or OpenAI directly for the writing.
             </p>
+            <div className="key-get">
+              <a className="btn btn-small btn-ghost" href={KEY_LINKS.anthropic} target="_blank" rel="noopener noreferrer">Get a Claude key</a>
+              <a className="btn btn-small btn-ghost" href={KEY_LINKS.openai} target="_blank" rel="noopener noreferrer">Get an OpenAI key</a>
+            </div>
             <ol className="small key-steps">
-              <li>Sign in at <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> and add some credit under Billing.</li>
-              <li>Under API Keys, create a key and copy it. It starts with <span className="mono">sk-ant-</span>.</li>
-              <li>Paste it here. I check it with Anthropic before saving.</li>
+              <li>Open either link, sign in, and add some credit to your account&apos;s billing.</li>
+              <li>Create a key and copy it.</li>
+              <li>Paste it here. I check it before saving.</li>
             </ol>
-            <label htmlFor="claude-key" className="small">API key</label>
+            <label htmlFor="claude-key" className="small">
+              API key{detected ? <span className="key-detected"> · {detected === "openai" ? "OpenAI" : "Claude"} key detected</span> : null}
+            </label>
             <input
               id="claude-key"
               type="password"
@@ -475,10 +531,10 @@ function PlanPanel({
               spellCheck={false}
               value={key}
               onChange={(e) => setKey(e.target.value)}
-              placeholder="sk-ant-…"
+              placeholder="sk-ant-… or sk-…"
             />
-            <div><button className="btn btn-small" type="submit" disabled={busy || key.trim().length < 20}>{busy ? "Checking…" : "Save key"}</button></div>
-            <p className="muted small">Stored encrypted. Remove it any time. Tip: set a monthly spend limit for the key in the Anthropic console.</p>
+            <div><button className="btn btn-small" type="submit" disabled={busy || !detected || key.trim().length < 20}>{busy ? "Checking…" : "Save key"}</button></div>
+            <p className="muted small">Stored encrypted. Remove it any time. Tip: set a monthly spending limit for the key with your provider.</p>
           </form>
         )}
       </div>
