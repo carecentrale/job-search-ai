@@ -41,8 +41,9 @@ export default function Privacy() {
           <tr><td>Your shortlist, passed jobs, tracker, notes, interview dates, followed companies and job links you add</td><td>You, and our daily hunt</td><td>To run your job search and remind you to follow up</td></tr>
           <tr><td>CVs, cover letters, AI reviews and fit scores we generate</td><td>Our AI providers, working from your information</td><td>So you can review, edit and use them</td></tr>
           <tr><td>Your own AI key, if you add one</td><td>You</td><td>To run the AI on your account. It is encrypted (AES-256-GCM) and never shown again; we display only its last 4 characters</td></tr>
-          <tr><td>An activity log: what you did in the app and when (for example &ldquo;uploaded a CV&rdquo;, &ldquo;approved a job&rdquo;), plus counts of AI requests and tokens</td><td>Recorded automatically as you use the app</td><td>To enforce free-week limits, support you, prevent abuse, and understand how the product is used</td></tr>
+          <tr><td>An activity log: what you did in the app and when (for example &ldquo;uploaded a CV&rdquo;, &ldquo;approved a job&rdquo;), which workspace screens and documents you opened, plus counts of AI requests and tokens</td><td>Recorded automatically as you use the app</td><td>To enforce free-week limits, support you, prevent abuse, and understand how the product is used</td></tr>
           <tr><td>Technical data: IP address, browser and device type, and request logs</td><td>Recorded automatically by our hosting and sign-in providers</td><td>Security, fraud prevention and keeping the service running</td></tr>
+          <tr><td>Anonymous visit statistics: pages visited, the site that referred you, country, browser and device type</td><td>Vercel Web Analytics, on every page except the admin area</td><td>To see how many people visit and which pages are useful. These statistics aren&apos;t linked to your account</td></tr>
         </tbody>
       </table>
       <p>
@@ -54,7 +55,10 @@ export default function Privacy() {
 
       <h2>3. Cookies and similar technology</h2>
       <p>
-        We use only the cookies needed to keep you signed in, set by Clerk. We don&apos;t use advertising cookies, analytics trackers or any technology that profiles you for marketing. The site loads its fonts from Google Fonts, so Google receives your IP address when the page loads.
+        We use only the cookies needed to keep you signed in, set by Clerk. We don&apos;t use advertising cookies or any technology that profiles you for marketing.
+      </p>
+      <p>
+        We count visits with Vercel Web Analytics, which uses no cookies and doesn&apos;t identify you. It recognizes repeat requests within a day from a temporary code made from your request, which is discarded after 24 hours. It sees only aggregate numbers, never your CV or account details. Inside your workspace, we also record which screens you open, as part of the activity log described in section 2. The site loads its fonts from Google Fonts, so Google receives your IP address when the page loads.
       </p>
 
       <h2>4. How the AI uses your information</h2>
@@ -80,7 +84,7 @@ export default function Privacy() {
       <table className="legal-table">
         <thead><tr><th>Provider</th><th>What they do</th><th>Location</th></tr></thead>
         <tbody>
-          <tr><td>Vercel</td><td>Hosts the website and app</td><td>United States</td></tr>
+          <tr><td>Vercel</td><td>Hosts the website and app, and counts anonymous visits (Web Analytics)</td><td>United States</td></tr>
           <tr><td>Neon</td><td>Stores your account data (database)</td><td>United States</td></tr>
           <tr><td>Clerk</td><td>Sign-up, sign-in and account security</td><td>United States</td></tr>
           <tr><td>Anthropic</td><td>AI reviewing and writing (Claude)</td><td>United States</td></tr>

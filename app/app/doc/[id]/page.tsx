@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import DocToolbar from "@/components/DocToolbar";
 import { currentCaller } from "@/lib/auth";
+import { logPageView } from "@/lib/activity";
 import { hasDb } from "@/lib/db";
 import { markdownToHtml, markdownToText } from "@/lib/markdown";
 import { getSeeker } from "@/lib/seekers";
@@ -36,6 +37,7 @@ export default async function DocPage({
   }
 
   const template: Template = TEMPLATES.includes(t as Template) ? (t as Template) : "minimal";
+  await logPageView(caller.userId, "document", { company: app.job.company, title: app.job.title, template });
   const { tailored, job } = app;
 
   return (

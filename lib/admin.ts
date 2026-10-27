@@ -79,7 +79,7 @@ export async function listUsers(q = ""): Promise<UserRow[]> {
       coalesce((select sum(calls) from claude_usage u where u.user_id = s.user_id and u.source = 'own'), 0)::int as own_calls_total,
       la.at as last_activity_at, la.type as last_activity
     from seekers s
-    left join lateral (select at, type from activity a where a.user_id = s.user_id order by at desc limit 1) la on true
+    left join lateral (select at, type from activity a where a.user_id = s.user_id and a.type <> 'page_view' order by at desc limit 1) la on true
     where ${q.trim() === ""} or lower(coalesce(s.email, '')) like ${like} or lower(s.user_id) like ${like}
     order by coalesce(s.last_seen_at, s.created_at) desc
     limit 500`;
@@ -137,7 +137,7 @@ export async function overview() {
 
 export type ActivityRow = { id: number; user_id: string; email: string | null; at: Date; type: string; detail: Record<string, unknown> };
 
-export async function recentActivity(opts: { userId?: string; type?: string; limit?: number } = {}): Promise<ActivityRow[]> {
+export async function recentActivity(opts: { userId?: string; type?: string; limit?: number; hidePageViews?: boolean } = {}): Promise<ActivityRow[]> {
   const sql = await db();
   const limit = Math.min(opts.limit ?? 200, 1000);
   return sql<ActivityRow[]>`
@@ -145,6 +145,7 @@ export async function recentActivity(opts: { userId?: string; type?: string; lim
     from activity a left join seekers s on s.user_id = a.user_id
     where (${!opts.userId} or a.user_id = ${opts.userId ?? ""})
       and (${!opts.type} or a.type = ${opts.type ?? ""})
+      and (${!opts.hidePageViews} or a.type <> 'page_view')
     order by a.at desc
     limit ${limit}`;
 }

@@ -6,13 +6,14 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
   await requireAdmin();
   const { type } = await searchParams;
   const valid = type && type in ACTIVITY_LABEL ? type : undefined;
-  const rows = await recentActivity({ type: valid, limit: 300 });
+  // Page views are frequent, so "Everything" leaves them out; the Page view chip shows them.
+  const rows = await recentActivity({ type: valid, limit: 300, hidePageViews: !valid });
 
   return (
     <section className="panel">
       <div className="panel-head">
         <h1>Activity</h1>
-        <p className="muted small">Latest 300 events, newest first. Times are Eastern.</p>
+        <p className="muted small">Latest 300 events, newest first. Times are Eastern. Page views are under their own filter. Public-site visitor stats are in Vercel, under Analytics.</p>
       </div>
       <nav className="chips" aria-label="Filter by event">
         <Link href="/admin/activity" className={!valid ? "on" : ""}>Everything</Link>

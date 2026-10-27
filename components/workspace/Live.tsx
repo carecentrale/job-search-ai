@@ -50,6 +50,12 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
   useEffect(() => {
     call("/api/me").then((r) => setState(r.state), (e: Error) => setLoadError(e.message));
   }, []);
+  // Tell the server which screen is open, for the owner's admin timeline.
+  const screen = !state ? null : !state.onboarded && tab !== "plan" ? null : tab;
+  useEffect(() => {
+    if (!screen) return;
+    fetch("/api/me/view", json("POST", { view: screen })).catch(() => {});
+  }, [screen]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), toast.error ? 6000 : 3000);

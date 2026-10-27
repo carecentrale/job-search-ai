@@ -31,7 +31,8 @@ export type ActivityType =
   | "company_removed"
   | "job_link_added"
   | "data_exported"
-  | "account_deleted";
+  | "account_deleted"
+  | "page_view";
 
 export async function logActivity(userId: string, type: ActivityType, detail: Record<string, unknown> = {}): Promise<void> {
   try {
@@ -39,6 +40,29 @@ export async function logActivity(userId: string, type: ActivityType, detail: Re
     await sql`insert into activity (user_id, type, detail) values (${userId}, ${type}, ${sql.json(detail as never)})`;
   } catch (e) {
     console.error("activity log failed", type, (e as Error).message);
+  }
+}
+
+/** Workspace screens whose views are logged. */
+export const VIEWS = ["today", "shortlist", "tracker", "brief", "plan", "document"] as const;
+
+/**
+ * Log that a user opened a screen. Repeat views of the same screen within
+ * 2 minutes are skipped, so flicking between tabs doesn't flood the log.
+ */
+export async function logPageView(userId: string, view: string, detail: Record<string, unknown> = {}): Promise<void> {
+  try {
+    const sql = await db();
+    await sql`
+      insert into activity (user_id, type, detail)
+      select ${userId}, 'page_view', ${sql.json({ view, ...detail } as never)}
+      where not exists (
+        select 1 from activity
+        where user_id = ${userId} and type = 'page_view' and detail ->> 'view' = ${view}
+          and at > now() - interval '2 minutes'
+      )`;
+  } catch (e) {
+    console.error("page view log failed", (e as Error).message);
   }
 }
 

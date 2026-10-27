@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import SiteAnalytics from "@/components/SiteAnalytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <SiteAnalytics />
+      </body>
     </html>
   );
   if (!clerkOn) return page;

@@ -31,6 +31,7 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   job_link_added: "Added a job link",
   data_exported: "Downloaded their data",
   account_deleted: "Deleted their account",
+  page_view: "Page view",
 };
 
 export function describe(type: string, d: D): string {
@@ -89,6 +90,10 @@ function describeEvent(type: string, d: D): string {
       return `Stopped following ${s(d.company)}.`;
     case "job_link_added":
       return `Added ${s(d.title)}${at(d)} by link (read via ${s(d.via)}, fit ${s(d.fit)}).`;
+    case "page_view": {
+      const names: Record<string, string> = { today: "Today", shortlist: "Shortlist", tracker: "Tracker", brief: "Your brief", plan: "Plan", document: "a CV and cover letter" };
+      return `Opened ${names[s(d.view)] ?? s(d.view)}${d.company ? ` for ${s(d.company)}` : ""}${d.template ? ` (${s(d.template)} template)` : ""}.`;
+    }
     case "data_exported":
       return "Downloaded a copy of their data.";
     case "account_deleted":
