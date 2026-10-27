@@ -59,7 +59,18 @@ export default function Terms() {
       <ul>
         <li><strong>Free week.</strong> New accounts get 7 days with AI on our account, including up to 5 tailored applications and daily request limits. These limits can change.</li>
         <li><strong>Your own key.</strong> If you add your own Anthropic or OpenAI API key, {LEGAL.product} is free for you, and your provider bills you directly for the AI you use. You&apos;re responsible for those charges and for following your provider&apos;s terms. We recommend setting a spending limit with your provider. You can remove your key at any time.</li>
-        <li><strong>Paid plans.</strong> If we introduce paid plans, we&apos;ll show the price and terms before you pay. Nothing is charged without your agreement.</li>
+        <li>
+          <strong>Personal plan.</strong> A monthly subscription, in Canadian or U.S. dollars, at the price shown before you pay. Taxes are included in that price. It includes the number of tailored applications and daily AI requests shown on your Plan page. Unused allowances don&apos;t carry over.
+        </li>
+        <li>
+          <strong>Billing and renewal.</strong> Payments are processed by Stripe. We never see or store your full card number. Your subscription renews automatically each month on the date you signed up, until you cancel. If a payment fails, Stripe retries it for a short period, and your plan may end if it can&apos;t be collected.
+        </li>
+        <li>
+          <strong>Cancelling.</strong> You can cancel any time under <em>Plan → Manage billing</em>. Cancelling stops the next renewal, and you keep Personal until the end of the month you&apos;ve paid for. We don&apos;t give partial refunds for the rest of a month, except where the law requires it. If something went wrong, contact us and we&apos;ll look at it.
+        </li>
+        <li>
+          <strong>Price changes.</strong> We&apos;ll tell you at least 30 days before a price change applies to your subscription, and you can cancel before it does.
+        </li>
       </ul>
       <p>We may change or stop free features, with notice in the app where practical.</p>
 

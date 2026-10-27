@@ -633,3 +633,15 @@ a { color: inherit; }
 .admin-dot { position: absolute; top: -3px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--warn); color: #fff; font-size: 0.68rem; font-weight: 700; line-height: 16px; text-align: center; }
 .ok-text { color: var(--accent); font-weight: 600; }
 .house-key-form { margin-top: 8px; }
+.plan-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 10px; }
+.plan-fields label { display: grid; gap: 4px; font-weight: 600; font-size: 0.92rem; }
+.plan-fields input { font: inherit; font-weight: 400; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.plan-form { display: grid; gap: 10px; justify-items: start; }
+
+/* ---------- Personal plan ---------- */
+.personal-offer { margin-bottom: 16px; border: 2px solid var(--brass); }
+.price-line strong { font-family: var(--font-display); font-size: 1.8rem; font-weight: 500; }
+.offer-list { margin: 8px 0 14px; padding-left: 1.2em; display: grid; gap: 4px; }
+.offer-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 10px; }
+.textbtn.on { text-decoration-thickness: 3px; color: var(--ink); }
+.plan-form .plan-fields { width: 100%; }

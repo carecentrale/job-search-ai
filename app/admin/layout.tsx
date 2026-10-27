@@ -16,6 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <nav className="ws-tabs" aria-label="Admin">
             <Link href="/admin">Overview and users</Link>
             <Link href="/admin/activity">Activity</Link>
+            <Link href="/admin/billing">Payments</Link>
             <Link href="/app">Your workspace</Link>
           </nav>
           <span className="admin-who">{admin.email ?? "owner"}</span>

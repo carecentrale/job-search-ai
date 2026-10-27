@@ -36,6 +36,12 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   tester_changed: "Tester flag",
   fresh_free_week: "Fresh free week",
   house_key_changed: "fuzzyHR's AI key",
+  checkout_started: "Opened checkout",
+  plan_started: "Subscribed",
+  plan_changed: "Subscription changed",
+  plan_ended: "Subscription ended",
+  payment_failed: "Payment failed",
+  billing_settings: "Payment settings",
 };
 
 export function describe(type: string, d: D): string {
@@ -106,6 +112,21 @@ function describeEvent(type: string, d: D): string {
       return `Given a fresh 7-day free week by ${s(d.by)}.`;
     case "house_key_changed":
       return d.action === "set" ? "Set fuzzyHR's AI key. Free AI writing is on." : d.action === "removed" ? "Removed fuzzyHR's AI key. Free AI writing is off." : `Tried to set fuzzyHR's AI key: ${s(d.message)}`;
+    case "checkout_started":
+      return `Opened the Personal checkout in ${s(d.currency).toUpperCase()}.`;
+    case "plan_started":
+      return `Started Personal${d.amount ? ` at ${(Number(d.amount) / 100).toFixed(2)} ${s(d.currency).toUpperCase()} a month` : ""}.`;
+    case "plan_changed":
+      return `Subscription went from ${s(d.from) || "new"} to ${s(d.to)}${d.cancelAtPeriodEnd ? ", set to cancel at period end" : ""}.`;
+    case "plan_ended":
+      return `Personal ended (${s(d.status)}).`;
+    case "payment_failed":
+      return `A payment of ${(Number(d.amount) / 100).toFixed(2)} ${s(d.currency).toUpperCase()} failed${d.attempt ? ` (attempt ${s(d.attempt)})` : ""}. Stripe will retry.`;
+    case "billing_settings": {
+      const what: Record<string, string> = { stripe_connected: "Connected Stripe.", stripe_rejected: `Tried to connect Stripe: ${s(d.message)}`, stripe_disconnected: "Disconnected Stripe." };
+      if (d.action === "plan_saved") return `Saved the Personal plan: CA$${(Number(d.priceCad) / 100).toFixed(2)} / US$${(Number(d.priceUsd) / 100).toFixed(2)} a month, ${s(d.appsPerMonth)} applications, ${d.selling ? "on sale" : "not on sale"}.`;
+      return what[s(d.action)] ?? JSON.stringify(d);
+    }
     case "data_exported":
       return "Downloaded a copy of their data.";
     case "account_deleted":

@@ -23,6 +23,15 @@ export type SeekerRecord = Seeker & {
   /** Which provider their own key belongs to, and the model chosen for it. */
   aiProvider: Provider | null;
   aiModel: string | null;
+  /** Personal plan (Stripe). */
+  subscription: {
+    customerId: string | null;
+    status: string | null;
+    currency: string | null;
+    periodStart: string | null;
+    periodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+  };
 };
 
 type Row = {
@@ -43,6 +52,12 @@ type Row = {
   ai_provider: Provider | null;
   ai_model: string | null;
   agent: Partial<AgentSettings> | null;
+  stripe_customer_id: string | null;
+  subscription_status: string | null;
+  plan_currency: string | null;
+  period_start: Date | null;
+  period_end: Date | null;
+  cancel_at_period_end: boolean | null;
 };
 
 const EMPTY_BRIEF: Brief = { name: "", targetTitles: [], skills: [], locations: [], remoteOk: true, avoid: [] };
@@ -66,6 +81,14 @@ function toRecord(r: Row): SeekerRecord {
     aiProvider: r.claude_key_enc ? (r.ai_provider ?? "anthropic") : null,
     aiModel: r.ai_model,
     agent: { ...DEFAULT_AGENT, ...(r.agent ?? {}) },
+    subscription: {
+      customerId: r.stripe_customer_id ?? null,
+      status: r.subscription_status ?? null,
+      currency: r.plan_currency ?? null,
+      periodStart: r.period_start ? r.period_start.toISOString() : null,
+      periodEnd: r.period_end ? r.period_end.toISOString() : null,
+      cancelAtPeriodEnd: Boolean(r.cancel_at_period_end),
+    },
   };
 }
 
@@ -79,9 +102,25 @@ export function hasOwnKey(s: SeekerRecord): boolean {
   return Boolean(s.claudeKeyEnc);
 }
 
-export function trialStatus(s: SeekerRecord, now = new Date()) {
+/** On the Personal plan (paid, or in Stripe's grace period after a failed payment). */
+export function isPersonal(s: SeekerRecord): boolean {
+  return s.plan === "personal";
+}
+
+/** Tailored applications written in the current billing month (rewrites of one already written this month don't count again). */
+export function personalUsed(s: SeekerRecord, now = new Date()): number {
+  const start = s.subscription.periodStart ? new Date(s.subscription.periodStart).getTime() : now.getTime() - 30 * 86_400_000;
+  return s.applications.filter((a) => a.tailored && new Date(a.tailored.createdAt).getTime() >= start).length;
+}
+
+/**
+ * The seeker's plan and how much of it is used.
+ * `appsPerMonth` is the Personal plan's monthly allowance (from Admin).
+ */
+export function trialStatus(s: SeekerRecord, now = new Date(), appsPerMonth = 15) {
   const used = s.applications.filter((a) => a.tailored).length;
   if (hasOwnKey(s)) return { plan: "own-key" as const, daysLeft: 0, ended: false, used, limit: null };
+  if (isPersonal(s)) return { plan: "personal" as const, daysLeft: 0, ended: false, used: personalUsed(s, now), limit: appsPerMonth };
   // Allow a minute of clock drift between the database and the server, so a new trial reads 7 days, not 8.
   const daysLeft = Math.max(0, Math.ceil((new Date(s.trialEndsAt).getTime() - now.getTime() - 60_000) / 86_400_000));
   return {

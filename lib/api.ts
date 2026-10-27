@@ -1,6 +1,7 @@
 import "server-only";
 import { logActivity, logAiWanted, touchLastSeen } from "./activity";
 import { houseKeyAvailable } from "./house";
+import { fmtPrice, salesStatus } from "./billing";
 import { currentCaller } from "./auth";
 import { houseCallsToday, limits } from "./claude";
 import { canStoreSecrets } from "./crypto";
@@ -61,8 +62,9 @@ export async function readJson<T>(req: Request): Promise<T> {
 /** Everything the workspace needs to draw itself. Never includes the user's key, only its last 4 characters. */
 export async function stateFor(s: SeekerRecord) {
   const own = hasOwnKey(s);
-  const trial = trialStatus(s);
   const houseOn = await houseKeyAvailable();
+  const sales = await salesStatus(houseOn);
+  const trial = trialStatus(s, new Date(), sales.plan.appsPerMonth);
   const house = houseOn && !trial.ended;
   return {
     brief: s.brief,
@@ -80,6 +82,23 @@ export async function stateFor(s: SeekerRecord) {
     autopilotPending: s.applications.filter((a) => a.approvedBy === "autopilot" && !a.tailored && a.status === "preparing").map((a) => a.id),
     sources: { companies: STARTER_BOARDS.length, following: s.extraBoards, ...searchSitesOn() },
     trial,
+    billing: {
+      personal: s.plan === "personal",
+      status: s.subscription.status,
+      periodEnd: s.subscription.periodEnd,
+      cancelAtPeriodEnd: s.subscription.cancelAtPeriodEnd,
+      canManage: Boolean(s.subscription.customerId),
+      /** The Personal plan, when it's on sale. */
+      offer: sales.ready
+        ? {
+            cad: fmtPrice(sales.plan.priceCad, "cad"),
+            usd: fmtPrice(sales.plan.priceUsd, "usd"),
+            appsPerMonth: sales.plan.appsPerMonth,
+            dailyRequests: sales.plan.dailyRequests,
+            testMode: sales.mode === "test",
+          }
+        : null,
+    },
     /** True when fuzzyHR's own AI key isn't set yet, so the workspace shows "coming soon" instead of the free week. */
     houseOff: !houseOn,
     /** They've already asked to be told when free AI writing is on. */
@@ -94,7 +113,7 @@ export async function stateFor(s: SeekerRecord) {
       canSaveKey: canStoreSecrets(),
       houseKeyAvailable: houseOn,
       usedToday: own ? null : await houseCallsToday(s.id),
-      dailyLimit: own ? null : limits().perUser,
+      dailyLimit: own ? null : s.plan === "personal" ? sales.plan.dailyRequests : limits().perUser,
     },
   };
 }

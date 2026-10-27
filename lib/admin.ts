@@ -224,6 +224,18 @@ export async function setTester(userId: string, tester: boolean): Promise<void> 
   await sql`update seekers set tester = ${tester}, updated_at = now() where user_id = ${userId}`;
 }
 
+export type SubscriberRow = { user_id: string; email: string | null; subscription_status: string | null; plan_currency: string | null; period_end: Date | null; cancel_at_period_end: boolean; plan: string };
+
+/** Everyone who has or had a Personal subscription. */
+export async function subscribers(): Promise<SubscriberRow[]> {
+  const sql = await db();
+  return sql<SubscriberRow[]>`
+    select user_id, email, subscription_status, plan_currency, period_end, cancel_at_period_end, plan
+    from seekers where stripe_subscription_id is not null
+    order by (plan = 'personal') desc, period_end desc nulls last
+    limit 500`;
+}
+
 export async function setRole(userId: string, role: "admin" | "user"): Promise<void> {
   const sql = await db();
   await sql`update seekers set role = ${role}, updated_at = now() where user_id = ${userId}`;

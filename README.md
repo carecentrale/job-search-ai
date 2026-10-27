@@ -56,6 +56,10 @@ Set these in Vercel → Project → Settings → Environment Variables.
 
 fuzzyHR's own AI key can be left out while testing; the owner adds it later in Admin, with no Vercel changes. Users then see "Free AI writing is switching on soon": hunting, matching and the tracker work, and anyone can add their own key. When someone tries an AI feature or presses Notify me, it's logged as `ai_wanted`. The admin overview turns that into a "Time to add your Anthropic key" alert, with a count on the workspace's Admin link. It ignores admins, and users marked as testers on their admin page. Once the key is saved in Admin, the same box offers to give everyone waiting a fresh 7-day free week.
 
+## Paid plans
+
+Admin → Payments: paste a Stripe secret key and fuzzyHR creates the product, monthly CAD and USD prices (tax included), a webhook endpoint and a customer portal in that Stripe account. Prices and allowances (tailored applications a month, AI requests a day) are set there too, along with an on-sale switch. Personal subscribers use fuzzyHR's AI key within those allowances. Stripe's webhooks (`/api/stripe/webhook`, signature-checked) keep each user's plan in sync. Deleting an account cancels its subscription.
+
 ## How the hunt works
 
 1. **Find.** Every morning at 7 (Toronto), fuzzyHR reads the public job boards of 115 companies (Greenhouse, Lever, Ashby, Recruitee; list in `lib/hunt/boards.ts`), the companies each user follows, and, when keys are set, Adzuna and Jooble searches built from each user's roles and cities. Duplicates are merged.

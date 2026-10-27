@@ -2,6 +2,7 @@ import { logActivity } from "@/lib/activity";
 import { ApiError, readJson, stateResponse, withSeeker } from "@/lib/api";
 import { clerkEnabled } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { cancelSubscriptionFor } from "@/lib/billing";
 import { deleteSeekerData } from "@/lib/seekers";
 
 /** GET /api/me: the signed-in seeker's workspace. */
@@ -24,6 +25,12 @@ export async function DELETE(req: Request) {
       throw new ApiError(409, "You're the only admin. Make someone else an admin first, so the site keeps an owner.");
     }
     const applications = s.applications.length;
+    try {
+      await cancelSubscriptionFor(s.id);
+    } catch (e) {
+      console.error("cancel on delete failed", (e as Error).message);
+      throw new ApiError(502, "I couldn't cancel your subscription with Stripe, so I haven't deleted anything yet. Cancel it under Manage billing first, or try again in a minute.");
+    }
     await deleteSeekerData(s.id);
     if (clerkEnabled()) {
       try {

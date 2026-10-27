@@ -29,7 +29,7 @@ const templates = [
   { id: "elegant", name: "Elegant", note: "Serif type, wide margins. Fits senior and executive roles." },
 ];
 
-const plans = [
+const basePlans = [
   {
     name: "Your own key",
     price: "$0",
@@ -53,16 +53,43 @@ const plans = [
     soon: false,
     featured: false,
   },
-  {
-    name: "Personal",
-    price: "$29",
-    period: "per month",
-    features: ["Claude on us, no key needed", "Unlimited tailored applications", "Match the style of any CV you like"],
-    cta: "Coming soon",
-    soon: true,
-    featured: false,
-  },
 ];
+
+/** The Personal card, priced from Admin → Payments; "coming soon" until it's on sale. */
+async function personalPlan() {
+  const base = { name: "Personal", featured: false, cta: "Get Personal" };
+  try {
+    const { salesStatus, fmtPrice } = await import("@/lib/billing");
+    const { houseKeyAvailable } = await import("@/lib/house");
+    const sales = await salesStatus(await houseKeyAvailable());
+    if (sales.ready) {
+      return {
+        ...base,
+        price: fmtPrice(sales.plan.priceCad, "cad"),
+        period: `a month, or ${fmtPrice(sales.plan.priceUsd, "usd")}`,
+        features: [
+          "No API key needed: AI on us",
+          `${sales.plan.appsPerMonth} tailored CVs and cover letters a month`,
+          "AI review of every hunt, and Autopilot",
+          "Tax included. Cancel any time",
+        ],
+        soon: false,
+      };
+    }
+  } catch {
+    /* no database at build time: show it as coming soon */
+  }
+  return {
+    ...base,
+    price: "Soon",
+    period: "",
+    features: ["No API key needed: AI on us", "Tailored CVs and cover letters every month", "AI review of every hunt, and Autopilot"],
+    soon: true,
+  };
+}
+
+/** Prices can change in Admin; refresh the page at most every 5 minutes. */
+export const revalidate = 300;
 
 const faqs = [
   {
@@ -94,7 +121,8 @@ const faqs = [
 /** Sign-up opens by itself once the Clerk keys and the database are set in Vercel. */
 const signupOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.DATABASE_URL);
 
-export default function Home() {
+export default async function Home() {
+  const plans = [...basePlans, await personalPlan()];
   return (
     <>
       <header className="nav">

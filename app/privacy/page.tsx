@@ -15,6 +15,7 @@ export default function Privacy() {
         <ul>
           <li>We use your CV and brief only to find jobs for you and write your applications.</li>
           <li>We don&apos;t sell your data, show you ads, or share it with employers or recruiters. Nothing is sent to an employer unless you send it yourself.</li>
+          <li>If you subscribe, Stripe handles your payment. We never see your card number.</li>
           <li>To write and review, we send your CV, brief and job postings to an AI provider: Anthropic, or OpenAI if you add an OpenAI key. We don&apos;t use your data to train AI models.</li>
           <li>Your data is stored in the United States. You can download it or delete your account at any time from <strong>Plan</strong> in your workspace.</li>
         </ul>
@@ -40,6 +41,7 @@ export default function Privacy() {
           <tr><td>Your brief: roles you want, strengths, cities, remote preference, things to avoid</td><td>You, or suggested by the AI from your CV for you to edit</td><td>To decide which jobs to show you</td></tr>
           <tr><td>Your shortlist, passed jobs, tracker, notes, interview dates, followed companies and job links you add</td><td>You, and our daily hunt</td><td>To run your job search and remind you to follow up</td></tr>
           <tr><td>CVs, cover letters, AI reviews and fit scores we generate</td><td>Our AI providers, working from your information</td><td>So you can review, edit and use them</td></tr>
+          <tr><td>Billing details, if you subscribe: your plan, currency, subscription status and renewal date</td><td>You, through Stripe&apos;s checkout. Your card details go straight to Stripe; we never see or store your card number</td><td>To provide and bill the Personal plan</td></tr>
           <tr><td>Your own AI key, if you add one</td><td>You</td><td>To run the AI on your account. It is encrypted (AES-256-GCM) and never shown again; we display only its last 4 characters</td></tr>
           <tr><td>An activity log: what you did in the app and when (for example &ldquo;uploaded a CV&rdquo;, &ldquo;approved a job&rdquo;), which workspace screens and documents you opened, plus counts of AI requests and tokens</td><td>Recorded automatically as you use the app</td><td>To enforce free-week limits, support you, prevent abuse, and understand how the product is used</td></tr>
           <tr><td>Technical data: IP address, browser and device type, and request logs</td><td>Recorded automatically by our hosting and sign-in providers</td><td>Security, fraud prevention and keeping the service running</td></tr>
@@ -89,6 +91,7 @@ export default function Privacy() {
           <tr><td>Clerk</td><td>Sign-up, sign-in and account security</td><td>United States</td></tr>
           <tr><td>Anthropic</td><td>AI reviewing and writing (Claude)</td><td>United States</td></tr>
           <tr><td>OpenAI</td><td>AI reviewing and writing, only if you add an OpenAI key</td><td>United States</td></tr>
+          <tr><td>Stripe</td><td>Payments and subscriptions for the Personal plan (receives your email, payment details and billing address)</td><td>United States</td></tr>
           <tr><td>Google Fonts</td><td>Website fonts (receives your IP address only)</td><td>United States</td></tr>
         </tbody>
       </table>
@@ -106,7 +109,7 @@ export default function Privacy() {
 
       <h2>7. How long we keep it</h2>
       <p>
-        We keep your information while your account is open. When you delete your account, your profile, CV, brief, applications, documents, saved key, briefings, usage records and activity log are deleted right away. Backups held by our database provider expire on their normal cycle, within 30 days. We keep one record that an account was deleted, with no personal details. Request logs at our hosting and sign-in providers expire on their own schedules.
+        We keep your information while your account is open. When you delete your account, your profile, CV, brief, applications, documents, saved key, briefings, usage records and activity log are deleted right away. Deleting your account also cancels any subscription. Stripe keeps payment and invoice records for as long as tax and accounting laws require. Backups held by our database provider expire on their normal cycle, within 30 days. We keep one record that an account was deleted, with no personal details. Request logs at our hosting and sign-in providers expire on their own schedules.
       </p>
 
       <h2>8. How we protect it</h2>

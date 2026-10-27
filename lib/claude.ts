@@ -4,7 +4,8 @@ import { houseKeyAvailable, houseLLM } from "./house";
 import { ApiError } from "./errors";
 import { canStoreSecrets, decrypt } from "./crypto";
 import { db } from "./db";
-import { hasOwnKey, trialStatus, type SeekerRecord } from "./seekers";
+import { planSettings } from "./billing";
+import { hasOwnKey, isPersonal, trialStatus, type SeekerRecord } from "./seekers";
 
 /**
  * Who pays for an AI call, and whether it's allowed.
@@ -55,13 +56,16 @@ export async function chooseClaude(s: SeekerRecord): Promise<Claude> {
     return { source: "own", llm: userLLM(s.aiProvider ?? "anthropic", key, s.aiModel) };
   }
   if (!(await houseKeyAvailable())) {
+    if (isPersonal(s)) {
+      throw new ApiError(503, "AI writing is briefly unavailable on our side. Your plan is fine, and nothing is lost. Try again in a little while.");
+    }
     throw new ApiError(
       402,
       "Free AI writing is switching on soon, and I've let the team know you're waiting. To use it right now, add your own Claude or OpenAI key under Plan. With your own key, fuzzyHR is free.",
       "house_off",
     );
   }
-  if (trialStatus(s).ended) {
+  if (!isPersonal(s) && trialStatus(s).ended) {
     throw new ApiError(402, "Your free week has ended. Add your own Claude or OpenAI key under Plan to keep using fuzzyHR for free.");
   }
   return { source: "house", llm: await houseLLM() };
@@ -73,8 +77,11 @@ export async function chooseClaude(s: SeekerRecord): Promise<Claude> {
  */
 export async function reserveCall(s: SeekerRecord, c: Claude): Promise<void> {
   if (c.source !== "house") return;
-  const { perUser, total } = limits();
-  if ((await houseCallsToday()) >= total) {
+  const personal = isPersonal(s);
+  const { total } = limits();
+  // Personal subscribers have their own daily allowance and aren't held back by the free-week capacity cap.
+  const perUser = personal ? (await planSettings()).dailyRequests : limits().perUser;
+  if (!personal && (await houseCallsToday()) >= total) {
     throw new ApiError(503, "fuzzyHR's free writing is at capacity for today. Add your own Claude or OpenAI key under Plan to keep going, or try again tomorrow.");
   }
   const sql = await db();
@@ -84,7 +91,12 @@ export async function reserveCall(s: SeekerRecord, c: Claude): Promise<void> {
       where claude_usage.calls < ${perUser}
     returning calls`;
   if (rows.length === 0 || perUser === 0) {
-    throw new ApiError(429, `You've used today's ${perUser} free writing requests. They reset at midnight Eastern, or add your own Claude or OpenAI key under Plan for no limits.`);
+    throw new ApiError(
+      429,
+      personal
+        ? `You've used today's ${perUser} AI requests on your Personal plan. They reset at midnight Eastern.`
+        : `You've used today's ${perUser} free writing requests. They reset at midnight Eastern, or add your own Claude or OpenAI key under Plan for no limits.`,
+    );
   }
 }
 

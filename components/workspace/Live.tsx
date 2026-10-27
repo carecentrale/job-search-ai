@@ -49,6 +49,34 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
 
   useEffect(() => {
     call("/api/me").then((r) => setState(r.state), (e: Error) => setLoadError(e.message));
+    // Back from Stripe Checkout: the payment confirmation can take a few seconds to reach us.
+    const billing = new URLSearchParams(window.location.search).get("billing");
+    if (billing) setTimeout(() => {
+      window.history.replaceState(null, "", "/app");
+      if (billing === "cancelled") {
+        setToast({ text: "No charge made. You can subscribe any time under Plan." });
+      } else if (billing === "success") {
+        setToast({ text: "Payment received. Switching on your Personal plan…" });
+        let tries = 0;
+        const poll = setInterval(async () => {
+          tries++;
+          try {
+            const r = await call("/api/me");
+            if (r.state.billing.personal || tries >= 15) {
+              clearInterval(poll);
+              setState(r.state);
+              setToast(
+                r.state.billing.personal
+                  ? { text: "You're on Personal. No API key needed: I'll write with fuzzyHR's AI." }
+                  : { text: "Your payment is still being confirmed. Refresh in a minute; if it doesn't show, write to us.", error: true },
+              );
+            }
+          } catch {
+            /* keep trying */
+          }
+        }, 2000);
+      }
+    }, 0);
   }, []);
   // Tell the server which screen is open, for the owner's admin timeline.
   const screen = !state ? null : !state.onboarded && tab !== "plan" ? null : tab;
@@ -179,6 +207,20 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
   const removeKey = () => act("key", () => call("/api/me/claude-key", { method: "DELETE" }), () => "Key removed");
   const notifyMe = (feature: string) =>
     act("notify", () => call("/api/me/ai-request", json("POST", { feature })), () => "You're on the list. You'll get a full free week when free AI writing switches on.");
+  const goTo = async (path: string, body?: unknown) => {
+    setBusy("billing");
+    try {
+      const res = await fetch(path, json("POST", body ?? {}));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Something went wrong. Try again.");
+      window.location.assign(data.url);
+    } catch (e) {
+      setToast({ text: (e as Error).message, error: true });
+      setBusy(null);
+    }
+  };
+  const subscribe = (currency: "cad" | "usd") => goTo("/api/me/billing/checkout", { currency });
+  const manageBilling = () => goTo("/api/me/billing/portal");
   const deleteAccount = async () => {
     setBusy("delete");
     try {
@@ -212,6 +254,11 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
       <div className="wrap trial-bar">
         {state.claude.mode === "own" ? (
           <span className="muted">Free with your own {state.claude.provider === "openai" ? "OpenAI" : "Claude"} key. No limits.</span>
+        ) : state.billing.personal ? (
+          <span className="muted">
+            Personal plan: {trial.used} of {trial.limit} tailored applications used this month.
+            {state.billing.status === "past_due" ? <> <span className="warn">Your last payment didn&apos;t go through.</span> <button className="textbtn small" onClick={() => setTab("plan")}>Update your card</button></> : null}
+          </span>
         ) : state.houseOff ? (
           <span className="muted">
             Free AI writing is switching on soon. Hunting, matching and your tracker work now.{" "}
@@ -250,6 +297,10 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
         )}
         {tab === "plan" ? (
           <>
+            {(state.billing.personal || state.billing.canManage) && <PersonalPanel state={state} busy={busy === "billing"} onManage={manageBilling} />}
+            {!state.billing.personal && state.billing.offer && state.claude.mode !== "own" && (
+              <PersonalOffer offer={state.billing.offer} busy={busy === "billing"} onSubscribe={subscribe} />
+            )}
             <PlanPanel state={state} busy={busy === "key" || busy === "notify"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} onNotify={() => notifyMe("notify me")} />
             <DataPanel busy={busy === "delete"} onDelete={deleteAccount} />
           </>
@@ -627,7 +678,9 @@ function PlanPanel({
           <h1>Your plan</h1>
           {!state.onboarded && <button className="textbtn small" onClick={onBack}>Back to setup</button>}
         </div>
-        {c.mode === "own" ? (
+        {state.billing.personal && c.mode !== "own" ? (
+          <p className="muted small">Your Personal plan covers the AI, so you don&apos;t need a key. You can still add your own below for unlimited use.</p>
+        ) : c.mode === "own" ? (
           <p>You&apos;re on <strong>Free with your own key</strong>: hunting, shortlists, reminders and unlimited CVs and cover letters, at no charge from fuzzyHR. {ownName} bills your account for the writing.</p>
         ) : state.houseOff ? (
           <>
@@ -892,6 +945,77 @@ function DataPanel({ busy, onDelete }: { busy: boolean; onDelete: () => void }) 
           </form>
         )}
       </div>
+    </section>
+  );
+}
+
+/** Canadians see CAD first; everyone else USD. They can pick either. */
+function defaultCurrency(): "cad" | "usd" {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+    const canada = /^America\/(Toronto|Montreal|Vancouver|Edmonton|Winnipeg|Halifax|Regina|St_Johns|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson_Creek|Iqaluit|Yellowknife|Swift_Current|Thunder_Bay|Nipigon|Rainy_River|Atikokan|Cambridge_Bay|Rankin_Inlet|Resolute|Inuvik|Creston|Fort_Nelson|Dawson)$/;
+    if (canada.test(tz) || /-CA$/i.test(navigator.language)) return "cad";
+  } catch {
+    /* fall through */
+  }
+  return "usd";
+}
+
+type Offer = NonNullable<WorkspaceState["billing"]["offer"]>;
+
+function PersonalOffer({ offer, busy, onSubscribe }: { offer: Offer; busy: boolean; onSubscribe: (c: "cad" | "usd") => void }) {
+  const [currency, setCurrency] = useState<"cad" | "usd">(defaultCurrency);
+  return (
+    <section className="panel personal-offer">
+      <div className="panel-head">
+        <h2>Personal</h2>
+        <p className="price-line"><strong>{currency === "cad" ? offer.cad : offer.usd}</strong> a month, tax included</p>
+      </div>
+      <p>No API key needed. I use fuzzyHR&apos;s AI for you.</p>
+      <ul className="small offer-list">
+        <li>{offer.appsPerMonth} tailored CVs and cover letters a month, with free rewrites</li>
+        <li>AI review of every hunt, and Autopilot</li>
+        <li>Up to {offer.dailyRequests} AI requests a day</li>
+        <li>Cancel any time from this page</li>
+      </ul>
+      <div className="offer-actions">
+        <button className="btn" disabled={busy} onClick={() => onSubscribe(currency)}>{busy ? "Opening checkout…" : "Subscribe"}</button>
+        <span className="small muted">
+          Pay in{" "}
+          <button className={`textbtn small${currency === "cad" ? " on" : ""}`} aria-pressed={currency === "cad"} onClick={() => setCurrency("cad")}>CAD</button>{" / "}
+          <button className={`textbtn small${currency === "usd" ? " on" : ""}`} aria-pressed={currency === "usd"} onClick={() => setCurrency("usd")}>USD</button>
+        </span>
+      </div>
+      <p className="muted small">
+        Secure payment by Stripe. fuzzyHR never sees your card number. Renews monthly until you cancel. See the <Link href="/terms">Terms</Link>.
+        {offer.testMode ? " Test mode: use card 4242 4242 4242 4242; no real charge." : ""}
+      </p>
+    </section>
+  );
+}
+
+function PersonalPanel({ state, busy, onManage }: { state: WorkspaceState; busy: boolean; onManage: () => void }) {
+  const b = state.billing;
+  const end = b.periodEnd ? new Date(b.periodEnd).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : null;
+  return (
+    <section className="panel personal-offer">
+      <div className="panel-head">
+        <h2>{b.personal ? "You're on Personal" : "Billing"}</h2>
+      </div>
+      {b.personal ? (
+        <>
+          <p>
+            {state.trial.used} of {state.trial.limit} tailored applications used this month.{" "}
+            {end ? (b.cancelAtPeriodEnd ? <>Your plan ends on <strong>{end}</strong> and won&apos;t renew.</> : <>Renews on {end}.</>) : null}
+          </p>
+          {b.status === "past_due" && <p className="warn small">Your last payment didn&apos;t go through. Stripe will retry; update your card to keep Personal.</p>}
+        </>
+      ) : (
+        <p className="muted small">Your Personal plan has ended. Invoices and receipts are still available.</p>
+      )}
+      {b.canManage && (
+        <div><button className="btn btn-small btn-ghost" disabled={busy} onClick={onManage}>{busy ? "Opening…" : "Manage billing, invoices or cancel"}</button></div>
+      )}
     </section>
   );
 }
