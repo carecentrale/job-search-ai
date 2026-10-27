@@ -9,7 +9,7 @@
 - [x] **Clerk** connected to fuzzyhr: sign-up and sign-in
 - [x] **Neon** connected to fuzzyhr as `DATABASE_URL`: accounts and saved data
 - [ ] **ENCRYPTION_KEY** (Environment Variables): any long random string, so users can save their own Claude key
-- [ ] **ANTHROPIC_API_KEY** (optional): fuzzyHR's key for free-week users. Skip it to run on users' own keys only.
+- [ ] **ANTHROPIC_API_KEY**: fuzzyHR's key for free-week users. Can wait: until it's set, users see "free AI writing is switching on soon" and can ask to be notified. The admin overview (and a dot on your Admin link) tells you when a real user, not a tester, is waiting. After adding it, use "Give them a fresh free week" there.
 - [x] **Admin**: the first account (yours) is admin automatically; no setting needed
 - [ ] **CRON_SECRET** (Environment Variables): any long random string, so the 7 am hunt can run
 - [ ] Optional, more jobs: free keys from developer.adzuna.com (`ADZUNA_APP_ID`, `ADZUNA_APP_KEY`) and jooble.org/api/about (`JOOBLE_API_KEY`). Adzuna's terms allow a 14-day trial for commercial use; after that it needs a licence agreement with Adzuna, and their logo as attribution. Check Jooble's partner terms too.

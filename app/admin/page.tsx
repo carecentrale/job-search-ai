@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { listUsers, overview, requireAdmin } from "@/lib/admin";
+import { aiWaiting, listUsers, overview, requireAdmin, type WaitingRow } from "@/lib/admin";
+import { houseKeyAvailable } from "@/lib/ai";
+import { giveFreshFreeWeek } from "./actions";
 import { ACTIVITY_LABEL, ago, daysUntil, when } from "@/lib/describe";
 
 const fmt = (v: number | bigint | string) => Number(v).toLocaleString("en-CA");
@@ -14,12 +16,14 @@ function planLabel(u: { key_provider: string | null; plan: string; trial_ends_at
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireAdmin();
   const { q = "" } = await searchParams;
-  const [{ users: u, usage, daily, limits }, rows] = await Promise.all([overview(), listUsers(q)]);
+  const [{ users: u, usage, daily, limits }, rows, waiting] = await Promise.all([overview(), listUsers(q), aiWaiting()]);
+  const keyOn = houseKeyAvailable();
   const capPct = limits.total ? Math.min(100, Math.round((usage.house_calls_today / limits.total) * 100)) : 0;
   const maxDay = Math.max(1, ...daily.map((d) => d.house + d.own));
 
   return (
     <div className="admin-stack">
+      <KeyAlert keyOn={keyOn} waiting={waiting} />
       <section className="admin-stats" aria-label="Summary">
         <div className="stat"><span>{fmt(u.total)}</span>users<small>{fmt(u.new_7d)} new this week, {fmt(u.active_7d)} active</small></div>
         <div className="stat"><span>{fmt(u.onboarded)}</span>set up<small>CV and brief done</small></div>
@@ -80,7 +84,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   const plan = planLabel(r);
                   return (
                     <tr key={r.user_id}>
-                      <td><Link href={`/admin/users/${encodeURIComponent(r.user_id)}`}>{r.email ?? r.user_id}</Link>{r.role === "admin" && <span className="pill pill-good">admin</span>}{!r.has_cv && <span className="pill pill-muted">no CV</span>}</td>
+                      <td><Link href={`/admin/users/${encodeURIComponent(r.user_id)}`}>{r.email ?? r.user_id}</Link>{r.role === "admin" && <span className="pill pill-good">admin</span>}{r.tester && <span className="pill pill-muted">tester</span>}{!r.has_cv && <span className="pill pill-muted">no CV</span>}</td>
                       <td><span className={`pill pill-${plan.tone}`}>{plan.text}</span></td>
                       <td className="clip">{r.roles.length ? r.roles.join(", ") : <span className="muted">not set</span>}</td>
                       <td className="num">{r.matches}</td>
@@ -98,5 +102,58 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * The placeholder for fuzzyHR's own Anthropic key. Quiet while only you and
+ * testers use the site; turns into an alert as soon as a real user wants AI.
+ */
+function KeyAlert({ keyOn, waiting }: { keyOn: boolean; waiting: WaitingRow[] }) {
+  if (keyOn && waiting.length === 0) return null;
+  const people = `${waiting.length} ${waiting.length === 1 ? "person" : "people"}`;
+  const list = waiting.length > 0 && (
+    <ul className="waiting-list">
+      {waiting.slice(0, 12).map((w) => (
+        <li key={w.user_id}>
+          <Link href={`/admin/users/${encodeURIComponent(w.user_id)}`}>{w.email ?? w.user_id}</Link>{" "}
+          <span className="muted small">wanted {w.features.filter(Boolean).join(", ")} · first {ago(w.first_wanted)}</span>
+        </li>
+      ))}
+      {waiting.length > 12 && <li className="muted small">and {waiting.length - 12} more</li>}
+    </ul>
+  );
+  if (keyOn) {
+    return (
+      <section className="panel key-alert key-alert-good">
+        <h2>Your key is on. {people} {waiting.length === 1 ? "was" : "were"} waiting.</h2>
+        <p className="small">They signed up before free AI writing was switched on, so their free week may have run down. Give them a fresh 7 days, starting now.</p>
+        {list}
+        <form action={giveFreshFreeWeek}><button className="btn btn-small" type="submit">Give {waiting.length === 1 ? "them" : `all ${waiting.length}`} a fresh free week</button></form>
+      </section>
+    );
+  }
+  if (waiting.length === 0) {
+    return (
+      <section className="panel key-alert">
+        <h2>Free AI writing is off</h2>
+        <p className="small">
+          Your Anthropic key isn&apos;t set, which is fine while you&apos;re testing. New users see &ldquo;free AI writing is switching on soon&rdquo; and can add their own key.
+          This box turns into an alert, with a dot on your Admin link, the moment a real user tries an AI feature. To keep friends and test accounts from counting, mark them as testers on their user page.
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className="panel key-alert key-alert-warn" role="alert">
+      <h2>Time to add your Anthropic key</h2>
+      <p className="small">{people} who {waiting.length === 1 ? "isn't a tester" : "aren't testers"} tried to use AI before it was switched on. They&apos;re waiting.</p>
+      {list}
+      <ol className="small key-alert-steps">
+        <li>At console.anthropic.com, add credit under Billing (leave auto-reload off to cap spending), then create a key under API Keys.</li>
+        <li>In Vercel, open fuzzyhr, then Environment Variables. Add <code>ANTHROPIC_API_KEY</code> with your key. Make sure <code>ENCRYPTION_KEY</code> and <code>CRON_SECRET</code> are there too.</li>
+        <li>Redeploy. This box then offers to give everyone waiting a fresh free week.</li>
+      </ol>
+    </section>
   );
 }

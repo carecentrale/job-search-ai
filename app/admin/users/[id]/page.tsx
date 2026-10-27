@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin, userDetail } from "@/lib/admin";
-import { changeRole } from "../../actions";
+import { changeRole, changeTester } from "../../actions";
 import { ACTIVITY_LABEL, ago, daysUntil, describe, when } from "@/lib/describe";
 
 const fmt = (v: number | bigint | string) => Number(v).toLocaleString("en-CA");
@@ -32,7 +32,15 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
           <h1>
             {u.email ?? "No email"}
             {u.role === "admin" && <span className="pill pill-good">admin</span>}
+            {u.tester && <span className="pill pill-muted">tester</span>}
           </h1>
+          <form action={changeTester}>
+            <input type="hidden" name="userId" value={u.user_id} />
+            <input type="hidden" name="tester" value={u.tester ? "false" : "true"} />
+            <button className="btn btn-small btn-ghost" type="submit" title="Testers don't count toward the 'time to add your key' alert">
+              {u.tester ? "Not a tester" : "Mark as tester"}
+            </button>
+          </form>
           {u.user_id === admin.userId ? (
             <span className="muted small">This is you</span>
           ) : (

@@ -47,6 +47,7 @@ export type UserRow = {
   last_seen_at: Date | null;
   plan: string;
   role: string;
+  tester: boolean;
   trial_ends_at: Date;
   key_provider: string | null;
   roles: string[];
@@ -67,7 +68,7 @@ export async function listUsers(q = ""): Promise<UserRow[]> {
   const today = usageDay();
   return sql<UserRow[]>`
     select
-      s.user_id, s.email, s.created_at, s.last_seen_at, s.plan, s.role, s.trial_ends_at,
+      s.user_id, s.email, s.created_at, s.last_seen_at, s.plan, s.role, s.tester, s.trial_ends_at,
       case when s.claude_key_enc is not null then coalesce(s.ai_provider, 'anthropic') end as key_provider,
       coalesce((select array_agg(x) from jsonb_array_elements_text(s.brief -> 'targetTitles') x), '{}') as roles,
       s.cv_text is not null as has_cv,
@@ -162,6 +163,7 @@ export type UserDetail = {
   key_model: string | null;
   key_last4: string | null;
   key_added_at: Date | null;
+  tester: boolean;
   brief: Brief | null;
   cv_text: string | null;
   applications: Application[];
@@ -175,7 +177,7 @@ export async function userDetail(userId: string) {
   const [u] = await sql<UserDetail[]>`
     select user_id, email, created_at, last_seen_at, plan, role, trial_ends_at,
       case when claude_key_enc is not null then coalesce(ai_provider, 'anthropic') end as key_provider,
-      ai_model as key_model, claude_key_last4 as key_last4, claude_key_added_at as key_added_at,
+      ai_model as key_model, claude_key_last4 as key_last4, claude_key_added_at as key_added_at, tester,
       brief, cv_text, applications, jsonb_array_length(passed)::int as passed, jsonb_array_length(matches)::int as matches, last_hunt_at
     from seekers where user_id = ${userId}`;
   if (!u) return null;
@@ -185,6 +187,41 @@ export async function userDetail(userId: string) {
   const briefings = await sql<{ date: string; data: Briefing }[]>`
     select to_char(date, 'YYYY-MM-DD') as date, data from briefings where user_id = ${userId} order by date desc limit 14`;
   return { user: u, usage, briefings, activity: await recentActivity({ userId, limit: 300 }) };
+}
+
+export type WaitingRow = { user_id: string; email: string | null; created_at: Date; first_wanted: Date; last_wanted: Date; features: string[] };
+
+/**
+ * Real users (not admins, not testers, no key of their own) who tried an AI
+ * feature, or asked to be told, while fuzzyHR's own key wasn't set up.
+ * Once the key is on, `since` limits this to people still waiting for a fresh free week.
+ */
+export async function aiWaiting(): Promise<WaitingRow[]> {
+  const sql = await db();
+  return sql<WaitingRow[]>`
+    select s.user_id, s.email, s.created_at, min(a.at) as first_wanted, max(a.at) as last_wanted,
+      array_agg(distinct a.detail ->> 'feature') as features
+    from activity a join seekers s on s.user_id = a.user_id
+    where a.type = 'ai_wanted' and s.role <> 'admin' and not s.tester and s.claude_key_enc is null
+      and not exists (select 1 from activity f where f.user_id = s.user_id and f.type = 'fresh_free_week' and f.at > a.at)
+    group by s.user_id, s.email, s.created_at
+    order by min(a.at)`;
+}
+
+/** Restart the free week (7 days, 168 hours) for these users. */
+export async function freshFreeWeek(userIds: string[]): Promise<number> {
+  if (!userIds.length) return 0;
+  const sql = await db();
+  const rows = await sql`
+    update seekers set trial_ends_at = now() + interval '168 hours', plan = 'trial', updated_at = now()
+    where user_id in ${sql(userIds)} and claude_key_enc is null
+    returning user_id`;
+  return rows.length;
+}
+
+export async function setTester(userId: string, tester: boolean): Promise<void> {
+  const sql = await db();
+  await sql`update seekers set tester = ${tester}, updated_at = now() where user_id = ${userId}`;
 }
 
 export async function setRole(userId: string, role: "admin" | "user"): Promise<void> {

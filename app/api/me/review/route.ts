@@ -14,5 +14,5 @@ export async function POST(req: Request) {
     const r = await reviewPending(s, trigger);
     const a = await autopilotApprove(r.seeker);
     return stateResponse(a.seeker, { review: { reviewed: r.reviewed, approved: a.approved.length } });
-  });
+  }, req);
 }

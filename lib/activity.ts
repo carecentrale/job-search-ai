@@ -32,7 +32,10 @@ export type ActivityType =
   | "job_link_added"
   | "data_exported"
   | "account_deleted"
-  | "page_view";
+  | "page_view"
+  | "ai_wanted"
+  | "tester_changed"
+  | "fresh_free_week";
 
 export async function logActivity(userId: string, type: ActivityType, detail: Record<string, unknown> = {}): Promise<void> {
   try {
@@ -63,6 +66,25 @@ export async function logPageView(userId: string, view: string, detail: Record<s
       )`;
   } catch (e) {
     console.error("page view log failed", (e as Error).message);
+  }
+}
+
+/**
+ * Someone tried an AI feature before fuzzyHR's own key was set up (or asked to
+ * be told when it is). Logged at most once a day per person, so the owner sees
+ * real demand rather than repeat clicks.
+ */
+export async function logAiWanted(userId: string, feature: string): Promise<void> {
+  try {
+    const sql = await db();
+    await sql`
+      insert into activity (user_id, type, detail)
+      select ${userId}, 'ai_wanted', ${sql.json({ feature } as never)}
+      where not exists (
+        select 1 from activity where user_id = ${userId} and type = 'ai_wanted' and at > now() - interval '1 day'
+      )`;
+  } catch (e) {
+    console.error("ai_wanted log failed", (e as Error).message);
   }
 }
 

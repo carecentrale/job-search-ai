@@ -52,6 +52,10 @@ Set these in Vercel → Project → Settings → Environment Variables.
 | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Optional, free at developer.adzuna.com | Adds Adzuna job search to the hunt |
 | `JOOBLE_API_KEY` | Optional, free at jooble.org/api/about | Adds Jooble job search to the hunt |
 
+## Before fuzzyHR's own AI key is set
+
+`ANTHROPIC_API_KEY` can be left out while testing. Users then see "Free AI writing is switching on soon": hunting, matching and the tracker work, and anyone can add their own key. When someone tries an AI feature or presses Notify me, it's logged as `ai_wanted`. The admin overview turns that into a "Time to add your Anthropic key" alert, with a count on the workspace's Admin link. It ignores admins, and users marked as testers on their admin page. Once the key is added and deployed, the same box offers to give everyone waiting a fresh 7-day free week.
+
 ## How the hunt works
 
 1. **Find.** Every morning at 7 (Toronto), fuzzyHR reads the public job boards of 115 companies (Greenhouse, Lever, Ashby, Recruitee; list in `lib/hunt/boards.ts`), the companies each user follows, and, when keys are set, Adzuna and Jooble searches built from each user's roles and cities. Duplicates are merged.

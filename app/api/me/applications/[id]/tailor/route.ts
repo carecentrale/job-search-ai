@@ -10,5 +10,5 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const app = s.applications.find((a) => a.id === id);
     const saved = await writeDocuments(s, id, app?.approvedBy === "autopilot" && !app.tailored ? "autopilot" : "you");
     return stateResponse(saved, { applicationId: id });
-  });
+  }, _req);
 }

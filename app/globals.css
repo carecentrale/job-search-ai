@@ -619,3 +619,15 @@ a { color: inherit; }
 .auth-legal a { color: inherit; }
 .danger-zone { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 14px; }
 .btn-danger { background: transparent; color: var(--warn); border: 2px solid var(--warn); }
+
+/* ---------- Admin: key placeholder ---------- */
+.key-alert { border-left: 4px solid var(--line); }
+.key-alert h2 { font-size: 1.3rem; margin-bottom: 6px; }
+.key-alert-warn { border-left-color: var(--warn); }
+.key-alert-warn h2 { color: var(--warn); }
+.key-alert-good { border-left-color: var(--accent); }
+.waiting-list { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 4px; }
+.key-alert-steps { margin: 10px 0 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.key-alert form { margin-top: 10px; }
+.admin-link { position: relative; }
+.admin-dot { position: absolute; top: -3px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--warn); color: #fff; font-size: 0.68rem; font-weight: 700; line-height: 16px; text-align: center; }

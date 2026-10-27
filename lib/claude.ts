@@ -53,7 +53,13 @@ export function chooseClaude(s: SeekerRecord): Claude {
     }
     return { source: "own", llm: userLLM(s.aiProvider ?? "anthropic", key, s.aiModel) };
   }
-  if (!houseKeyAvailable()) throw new ApiError(402, "Add your Claude or OpenAI key under Plan to switch on writing. With your own key, fuzzyHR is free.");
+  if (!houseKeyAvailable()) {
+    throw new ApiError(
+      402,
+      "Free AI writing is switching on soon, and I've let the team know you're waiting. To use it right now, add your own Claude or OpenAI key under Plan. With your own key, fuzzyHR is free.",
+      "house_off",
+    );
+  }
   if (trialStatus(s).ended) {
     throw new ApiError(402, "Your free week has ended. Add your own Claude or OpenAI key under Plan to keep using fuzzyHR for free.");
   }

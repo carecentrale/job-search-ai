@@ -79,5 +79,5 @@ export async function POST(req: Request) {
     });
     await logActivity(s.id, "job_link_added", { company: job.company, title: job.title, url: job.url, via, fit: mine.fit });
     return stateResponse(saved, { added: { id: job.id, company: job.company, title: job.title } });
-  });
+  }, req);
 }

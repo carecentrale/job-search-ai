@@ -35,7 +35,7 @@ function huntSummary(h: NonNullable<Reply["hunt"]>) {
   return `I read ${h.read} postings and shortlisted ${h.found}.`;
 }
 
-export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boolean; isAdmin?: boolean }) {
+export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }: { clerk: boolean; isAdmin?: boolean; adminAlert?: number }) {
   const [state, setState] = useState<WorkspaceState | null>(null);
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState<Tab>("today");
@@ -177,6 +177,8 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
   const saveKey = (apiKey: string) =>
     act("key", () => call("/api/me/claude-key", json("PUT", { apiKey })), () => "Key saved. fuzzyHR is now free for you, with no limits.");
   const removeKey = () => act("key", () => call("/api/me/claude-key", { method: "DELETE" }), () => "Key removed");
+  const notifyMe = (feature: string) =>
+    act("notify", () => call("/api/me/ai-request", json("POST", { feature })), () => "You're on the list. You'll get a full free week when free AI writing switches on.");
   const deleteAccount = async () => {
     setBusy("delete");
     try {
@@ -203,12 +205,23 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
         tabs={state.onboarded ? { tab, setTab, shortlist: state.matches.length } : undefined}
         onPlan={() => setTab("plan")}
         isAdmin={isAdmin}
+        adminAlert={adminAlert}
         needsKey={state.claude.mode !== "own" && state.claude.canSaveKey && tab !== "plan"}
       />
 
       <div className="wrap trial-bar">
         {state.claude.mode === "own" ? (
           <span className="muted">Free with your own {state.claude.provider === "openai" ? "OpenAI" : "Claude"} key. No limits.</span>
+        ) : state.houseOff ? (
+          <span className="muted">
+            Free AI writing is switching on soon. Hunting, matching and your tracker work now.{" "}
+            {state.aiRequested ? (
+              <span>You&apos;re on the list for a full free week.</span>
+            ) : (
+              <button className="textbtn small" disabled={busy === "notify"} onClick={() => notifyMe("notify me")}>Notify me</button>
+            )}{" "}
+            <button className="textbtn small" onClick={() => setTab("plan")}>Or use your own key now</button>
+          </span>
         ) : trial.ended || state.claude.mode === "none" ? (
           <span className="warn">
             {trial.ended ? "Your free week has ended. " : ""}Add your own Claude or OpenAI key to use fuzzyHR for free.{" "}
@@ -237,7 +250,7 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
         )}
         {tab === "plan" ? (
           <>
-            <PlanPanel state={state} busy={busy === "key"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} />
+            <PlanPanel state={state} busy={busy === "key" || busy === "notify"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} onNotify={() => notifyMe("notify me")} />
             <DataPanel busy={busy === "delete"} onDelete={deleteAccount} />
           </>
         ) : !state.onboarded ? (
@@ -344,7 +357,15 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
                                 {busy === `tailor:${a.id}` ? "Writing… about 30 seconds" : "Write my CV and letter"}
                               </button>
                             ) : (
-                              <button className="textbtn small" onClick={() => setTab("plan")}>Add your AI key to write this</button>
+                              state.houseOff ? (
+                                <span className="small muted">
+                                  Free writing is coming soon.{" "}
+                                  {state.aiRequested ? "You're on the list." : <button className="textbtn small" disabled={busy === "notify"} onClick={() => notifyMe("writing")}>Notify me</button>}{" "}
+                                  <button className="textbtn small" onClick={() => setTab("plan")}>Use my own key</button>
+                                </span>
+                              ) : (
+                                <button className="textbtn small" onClick={() => setTab("plan")}>Add your AI key to write this</button>
+                              )
                             )}
                           </AppCard>
                         ))}
@@ -407,12 +428,14 @@ function Top({
   onPlan,
   needsKey,
   isAdmin,
+  adminAlert = 0,
 }: {
   clerk: boolean;
   tabs?: { tab: Tab; setTab: (t: Tab) => void; shortlist: number };
   onPlan?: () => void;
   needsKey?: boolean;
   isAdmin?: boolean;
+  adminAlert?: number;
 }) {
   return (
     <header className="ws-top">
@@ -435,7 +458,11 @@ function Top({
             ))}
           </nav>
         )}
-        {isAdmin && <Link className="admin-link" href="/admin">Admin</Link>}
+        {isAdmin && (
+          <Link className="admin-link" href="/admin" title={adminAlert ? `${adminAlert} waiting for free AI writing: time to add your Anthropic key` : undefined}>
+            Admin{adminAlert > 0 && <span className="admin-dot" aria-label={`${adminAlert} waiting`}>{adminAlert}</span>}
+          </Link>
+        )}
         {clerk && (
           <div className="ws-user">
             {needsKey && onPlan && (
@@ -580,12 +607,14 @@ function PlanPanel({
   onSave,
   onRemove,
   onBack,
+  onNotify,
 }: {
   state: WorkspaceState;
   busy: boolean;
   onSave: (key: string) => void;
   onRemove: () => void;
   onBack: () => void;
+  onNotify: () => void;
 }) {
   const [key, setKey] = useState("");
   const c = state.claude;
@@ -600,6 +629,18 @@ function PlanPanel({
         </div>
         {c.mode === "own" ? (
           <p>You&apos;re on <strong>Free with your own key</strong>: hunting, shortlists, reminders and unlimited CVs and cover letters, at no charge from fuzzyHR. {ownName} bills your account for the writing.</p>
+        ) : state.houseOff ? (
+          <>
+            <p><strong>Free AI writing is switching on soon.</strong> Hunting, matching, your shortlist and tracker work now. The AI that reviews matches and writes your CV and cover letters isn&apos;t on yet for free accounts.</p>
+            <p>
+              {state.aiRequested ? (
+                <span className="muted">You&apos;re on the list. When it switches on, you&apos;ll get a full free week, starting then.</span>
+              ) : (
+                <button className="btn btn-small btn-ghost" disabled={busy} onClick={onNotify}>Notify me when it&apos;s on</button>
+              )}
+            </p>
+            <p className="muted small">Don&apos;t want to wait? Add your own Claude or OpenAI key below, and everything switches on now, free from fuzzyHR.</p>
+          </>
         ) : state.trial.ended ? (
           <p>Your free week has ended. Add your own Claude or OpenAI key below and fuzzyHR stays free, with no limits. Everything you made is still here.</p>
         ) : c.houseKeyAvailable ? (
@@ -766,7 +807,11 @@ function HuntSettings({
             When the AI rates a role highly, I&apos;ll approve it and write the CV and cover letter without asking. I never send anything. You review every application and submit it yourself.
             {state.claude.mode === "house" ? " On the free week, each approval uses one of your 5 tailored applications." : ""}
           </span>
-          {!state.ai && <button type="button" className="textbtn small" onClick={onPlan}>Add your AI key to use Autopilot</button>}
+          {!state.ai && (
+            <button type="button" className="textbtn small" onClick={onPlan}>
+              {state.houseOff ? "Autopilot needs AI, which is switching on soon. See Plan" : "Add your AI key to use Autopilot"}
+            </button>
+          )}
         </label>
       </div>
       {a.autopilot && (

@@ -1,10 +1,10 @@
 import "server-only";
-import { logActivity, touchLastSeen } from "./activity";
+import { logActivity, logAiWanted, touchLastSeen } from "./activity";
 import { houseKeyAvailable } from "./ai";
 import { currentCaller } from "./auth";
 import { houseCallsToday, limits } from "./claude";
 import { canStoreSecrets } from "./crypto";
-import { hasDb } from "./db";
+import { db, hasDb } from "./db";
 import { ApiError } from "./errors";
 import { nudgesFor } from "./hunt/followup";
 import { STARTER_BOARDS } from "./hunt/boards";
@@ -14,7 +14,17 @@ import { getOrCreateSeeker, hasOwnKey, isOnboarded, latestBriefing, trialStatus,
 export { ApiError };
 
 /** Run a handler for the signed-in seeker, with consistent errors. */
-export async function withSeeker(handler: (s: SeekerRecord) => Promise<Response>): Promise<Response> {
+/** Which feature a request was for, from its path, for the owner's demand log. */
+function featureOf(req?: Request): string {
+  const path = req ? new URL(req.url).pathname : "";
+  if (path.endsWith("/tailor")) return "writing";
+  if (path.endsWith("/review")) return "review";
+  if (path.endsWith("/jobs")) return "job link";
+  if (path.endsWith("/agent")) return "autopilot";
+  return "AI";
+}
+
+export async function withSeeker(handler: (s: SeekerRecord) => Promise<Response>, req?: Request): Promise<Response> {
   let seeker: SeekerRecord | null = null;
   try {
     if (!hasDb()) throw new ApiError(503, "Accounts are not switched on yet. Try the demo in the meantime.");
@@ -25,6 +35,10 @@ export async function withSeeker(handler: (s: SeekerRecord) => Promise<Response>
     return await handler(seeker);
   } catch (e) {
     if (e instanceof ApiError) {
+      if (seeker && e.code === "house_off") {
+        await logAiWanted(seeker.id, featureOf(req));
+        return Response.json({ error: e.message, code: e.code }, { status: e.status });
+      }
       // Plan limits and caps, so the owner can see who is running into them.
       if (seeker && (e.status === 402 || (e.status === 429 && !/^I hunted/.test(e.message)) || (e.status === 503 && /capacity/.test(e.message)))) {
         await logActivity(seeker.id, "limit_hit", { status: e.status, message: e.message });
@@ -65,6 +79,10 @@ export async function stateFor(s: SeekerRecord) {
     autopilotPending: s.applications.filter((a) => a.approvedBy === "autopilot" && !a.tailored && a.status === "preparing").map((a) => a.id),
     sources: { companies: STARTER_BOARDS.length, following: s.extraBoards, ...searchSitesOn() },
     trial,
+    /** True when fuzzyHR's own AI key isn't set yet, so the workspace shows "coming soon" instead of the free week. */
+    houseOff: !houseKeyAvailable(),
+    /** They've already asked to be told when free AI writing is on. */
+    aiRequested: !own && !houseKeyAvailable() ? await aiRequested(s.id) : false,
     /** Can Claude write for this user right now (subject to daily caps on fuzzyHR's key)? */
     ai: own || house,
     claude: {
@@ -78,6 +96,12 @@ export async function stateFor(s: SeekerRecord) {
       dailyLimit: own ? null : limits().perUser,
     },
   };
+}
+
+async function aiRequested(userId: string): Promise<boolean> {
+  const sql = await db();
+  const [row] = await sql`select 1 from activity where user_id = ${userId} and type = 'ai_wanted' limit 1`;
+  return Boolean(row);
 }
 
 export type WorkspaceState = Awaited<ReturnType<typeof stateFor>>;

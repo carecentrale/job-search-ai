@@ -32,6 +32,9 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   data_exported: "Downloaded their data",
   account_deleted: "Deleted their account",
   page_view: "Page view",
+  ai_wanted: "Wanted AI (no key yet)",
+  tester_changed: "Tester flag",
+  fresh_free_week: "Fresh free week",
 };
 
 export function describe(type: string, d: D): string {
@@ -94,6 +97,12 @@ function describeEvent(type: string, d: D): string {
       const names: Record<string, string> = { today: "Today", shortlist: "Shortlist", tracker: "Tracker", brief: "Your brief", plan: "Plan", document: "a CV and cover letter" };
       return `Opened ${names[s(d.view)] ?? s(d.view)}${d.company ? ` for ${s(d.company)}` : ""}${d.template ? ` (${s(d.template)} template)` : ""}.`;
     }
+    case "ai_wanted":
+      return `Wanted ${s(d.feature) === "notify me" ? "to be told when free AI writing is on" : `to use AI (${s(d.feature)})`} before your Anthropic key was set up.`;
+    case "tester_changed":
+      return `${d.tester ? "Marked as a tester" : "No longer a tester"} by ${s(d.by)}.`;
+    case "fresh_free_week":
+      return `Given a fresh 7-day free week by ${s(d.by)}.`;
     case "data_exported":
       return "Downloaded a copy of their data.";
     case "account_deleted":
