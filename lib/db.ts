@@ -56,6 +56,17 @@ async function migrate(db: Sql): Promise<void> {
   await db`alter table seekers add column if not exists claude_key_added_at timestamptz`;
   await db`alter table seekers add column if not exists ai_provider text`;
   await db`alter table seekers add column if not exists ai_model text`;
+  await db`alter table seekers add column if not exists last_seen_at timestamptz`;
+  await db`
+    create table if not exists activity (
+      id      bigserial primary key,
+      user_id text not null,
+      at      timestamptz not null default now(),
+      type    text not null,
+      detail  jsonb not null default '{}'::jsonb
+    )`;
+  await db`create index if not exists activity_user_at on activity (user_id, at desc)`;
+  await db`create index if not exists activity_at on activity (at desc)`;
   await db`
     create table if not exists claude_usage (
       user_id       text not null,

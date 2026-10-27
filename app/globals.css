@@ -494,3 +494,74 @@ a { color: inherit; }
 .ws-user { gap: 0; }
 .key-get { display: flex; gap: 8px; flex-wrap: wrap; }
 .key-detected { color: var(--accent); font-weight: 600; }
+
+/* ---------- Admin ---------- */
+.admin { min-height: 100vh; background: var(--bg); }
+.admin .ws-tabs a { color: var(--hero-muted); text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 10px 14px; border-radius: 999px; }
+.admin .ws-tabs a:hover { color: var(--hero-ink); background: rgb(255 255 255 / 0.08); }
+.admin-who { margin-left: auto; color: var(--hero-muted); font-size: 0.85rem; }
+.admin-main { padding-block: 24px 80px; }
+.admin-stack { display: flex; flex-direction: column; gap: 24px; }
+.admin h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); overflow-wrap: anywhere; }
+.admin h2 { font-family: var(--font-body); font-weight: 600; font-size: 1.05rem; }
+.admin-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+.stat span { font-family: var(--font-display); font-size: 2.2rem; color: var(--ink); font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat small { font-weight: 400; font-size: 0.82rem; margin-top: 4px; }
+.meter { height: 10px; background: var(--band); border-radius: 999px; overflow: hidden; }
+.meter-fill { height: 100%; background: var(--accent); }
+.meter-hot { background: var(--warn); }
+.spark { display: flex; align-items: flex-end; gap: 6px; height: 90px; padding-top: 8px; }
+.spark-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; position: relative; padding-bottom: 16px; min-width: 0; }
+.spark-col span { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 0.7rem; color: var(--muted); }
+.spark-house { background: var(--accent); border-radius: 3px 3px 0 0; min-height: 1px; }
+.spark-own { background: var(--brass); border-radius: 3px 3px 0 0; }
+.legend { display: flex; align-items: center; gap: 6px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.dot-house { background: var(--accent); }
+.dot-own { background: var(--brass); margin-left: 10px; }
+.admin-search { display: flex; gap: 8px; }
+.admin-search input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; min-width: 0; width: 260px; max-width: 100%; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.admin-table th { text-align: left; font-weight: 600; color: var(--muted); font-size: 0.8rem; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.admin-table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table .clip { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-table a { color: var(--accent); font-weight: 600; }
+.pill { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+.admin-table td > .pill:first-child { margin-left: 0; }
+.pill-good { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.pill-neutral { background: var(--chip); color: var(--ink); }
+.pill-warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.pill-muted { background: var(--chip); color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips a { font-size: 0.82rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--chip); color: var(--muted); text-decoration: none; }
+.chips a.on { background: var(--accent); color: var(--accent-ink); }
+.feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.feed li { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 14px; padding-block: 10px; border-top: 1px solid var(--line); }
+.feed li:first-child { border-top: 0; }
+.feed time { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.feed p { overflow-wrap: anywhere; }
+.feed a { color: var(--accent); font-weight: 600; }
+.feed-limit_hit .pill, .feed-write_failed .pill, .feed-key_rejected .pill { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.feed-documents_written .pill, .feed-key_added .pill, .feed-signed_up .pill { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+@media (max-width: 560px) { .feed li { grid-template-columns: 1fr; gap: 2px; } }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px 24px; margin: 0; }
+.facts-tight { grid-template-columns: 1fr; gap: 8px; }
+.facts dt { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.facts dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.admin-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .admin-two { grid-template-columns: 1fr; } }
+.cv-text { white-space: pre-wrap; font: 400 0.85rem/1.5 var(--font-body); background: var(--bg); border-radius: 10px; padding: 14px; max-height: 480px; overflow: auto; margin-top: 10px; }
+.spark-col { max-width: 44px; }
+.spark { justify-content: flex-start; }
+.admin-search { flex: 1 1 260px; max-width: 360px; min-width: 0; }
+.admin-search input { flex: 1; width: auto; min-width: 0; }
+.admin .ws-top-inner { flex-wrap: wrap; row-gap: 4px; }
+.admin .ws-tabs { flex-wrap: wrap; }
+@media (max-width: 560px) { .admin-who { display: none; } }
+.admin .panel { min-width: 0; }
+.facts dd.mono { word-break: break-all; }

@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { checkKey, PROVIDER_NAME, providerOfKey } from "@/lib/ai";
 import { ApiError, readJson, stateResponse, withSeeker } from "@/lib/api";
 import { canStoreSecrets, encrypt } from "@/lib/crypto";
@@ -19,6 +20,7 @@ export async function PUT(req: Request) {
     const who = PROVIDER_NAME[provider];
     const check = await checkKey(provider, apiKey);
     if (check.status !== "ok") {
+      await logActivity(s.id, "key_rejected", { provider, reason: check.status });
       if (check.status === "refused") throw new ApiError(422, `${who} didn't accept that key. Check you copied all of it, and that it hasn't been revoked.`);
       if (check.status === "no-model") throw new ApiError(422, `That ${who} key works, but it can't use any of the GPT models fuzzyHR writes with.`);
       throw new ApiError(503, `I couldn't reach ${who} to check the key. Try again in a minute.`);
@@ -27,11 +29,16 @@ export async function PUT(req: Request) {
     const saved = await updateSeeker(s.id, {
       claudeKey: { enc: encrypt(apiKey), last4: apiKey.slice(-4), provider, model: check.model },
     });
+    await logActivity(s.id, "key_added", { provider, model: check.model, last4: apiKey.slice(-4) });
     return stateResponse(saved);
   });
 }
 
 /** DELETE /api/me/claude-key: forget the key. */
 export async function DELETE() {
-  return withSeeker(async (s) => stateResponse(await updateSeeker(s.id, { claudeKey: null })));
+  return withSeeker(async (s) => {
+    const saved = await updateSeeker(s.id, { claudeKey: null });
+    await logActivity(s.id, "key_removed", { provider: s.aiProvider });
+    return stateResponse(saved);
+  });
 }

@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { ApiError, readJson, stateResponse, withSeeker } from "@/lib/api";
 import type { Application } from "@/lib/hunt/types";
 import { updateSeeker } from "@/lib/seekers";
@@ -13,6 +14,7 @@ export async function POST(req: Request) {
       applications: [app, ...s.applications.filter((a) => a.id !== app.id)],
       matches: s.matches.filter((m) => m.id !== job.id),
     });
+    await logActivity(s.id, "application_created", { company: job.company, title: job.title, fit: job.fit, url: job.url });
     return stateResponse(saved, { applicationId: app.id });
   });
 }

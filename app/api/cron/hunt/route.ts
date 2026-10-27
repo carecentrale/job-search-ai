@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { runDailyHunt } from "@/lib/hunt/run";
 import { listActiveSeekers, recordBriefing } from "@/lib/store";
 
@@ -25,6 +26,9 @@ export async function GET(req: Request) {
   for (const [i, b] of briefings.entries()) {
     try {
       await recordBriefing(seekers[i], b, now);
+      if (seekers[i].id !== "demo") {
+        await logActivity(b.seekerId, "hunt", { trigger: "daily", read: b.postingsRead, found: b.newMatches.length, nudges: b.nudges.length });
+      }
     } catch (e) {
       failed.push(`${b.seekerId}: ${(e as Error).message}`);
     }

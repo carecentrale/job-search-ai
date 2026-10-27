@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { ApiError, readJson, stateResponse, withSeeker } from "@/lib/api";
 import type { Application, ApplicationStatus } from "@/lib/hunt/types";
 import { updateSeeker } from "@/lib/seekers";
@@ -29,6 +30,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
 
     const saved = await updateSeeker(s.id, { applications: s.applications.map((a) => (a.id === id ? next : a)) });
+    const who = { company: app.job.company, title: app.job.title };
+    if (body.status && body.status !== app.status) await logActivity(s.id, "status_changed", { ...who, from: app.status, to: body.status });
+    if (body.followedUp) await logActivity(s.id, "followed_up", who);
+    if (body.note !== undefined || body.interviewAt !== undefined) {
+      await logActivity(s.id, "application_note", { ...who, note: next.note ?? null, interviewAt: next.interviewAt ?? null });
+    }
     return stateResponse(saved);
   });
 }

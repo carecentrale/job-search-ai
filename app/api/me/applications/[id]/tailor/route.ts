@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { tailorApplication } from "@/lib/ai";
 import { ApiError, stateResponse, withSeeker } from "@/lib/api";
 import { chooseClaude, claudeError, recordUse, reserveCall } from "@/lib/claude";
@@ -33,12 +34,31 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       out = await tailorApplication(claude.llm, s.cvText, s.brief, app.job);
     } catch (e) {
       console.error("tailor failed", (e as { status?: number }).status, (e as Error).message);
-      throw claudeError(e, claude);
+      const err = claudeError(e, claude);
+      await logActivity(s.id, "write_failed", {
+        company: app.job.company,
+        provider: claude.llm.provider,
+        keySource: claude.source,
+        status: (e as { status?: number }).status ?? null,
+        message: err.message,
+      });
+      throw err;
     }
     await recordUse(s, claude, out.use);
 
     const saved = await updateSeeker(s.id, {
       applications: s.applications.map((a) => (a.id === id ? { ...a, tailored: out.data, writes: (a.writes ?? 0) + 1 } : a)),
+    });
+    await logActivity(s.id, "documents_written", {
+      company: app.job.company,
+      title: app.job.title,
+      provider: claude.llm.provider,
+      model: claude.llm.model,
+      keySource: claude.source,
+      write: (app.writes ?? 0) + 1,
+      inputTokens: out.use.inputTokens,
+      outputTokens: out.use.outputTokens,
+      gaps: out.data.gaps.length,
     });
     return stateResponse(saved, { applicationId: id });
   });

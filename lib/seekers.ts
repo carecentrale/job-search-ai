@@ -1,4 +1,5 @@
 import type { Provider } from "./ai";
+import { logActivity } from "./activity";
 import { db } from "./db";
 import type { Briefing, Seeker } from "./hunt/run";
 import type { BoardRef } from "./hunt/sources";
@@ -104,8 +105,10 @@ export async function getOrCreateSeeker(userId: string, email: () => Promise<str
     insert into seekers (user_id, email, trial_ends_at)
     values (${userId}, ${await email()}, ${new Date(Date.now() + TRIAL_DAYS * 86_400_000)})
     on conflict (user_id) do update set updated_at = now()
-    returning *`;
-  return toRecord(rows[0]);
+    returning *, (xmax = 0) as inserted`;
+  const record = toRecord(rows[0]);
+  if ((rows[0] as Row & { inserted?: boolean }).inserted) await logActivity(userId, "signed_up", { email: record.email });
+  return record;
 }
 
 type Patch = Partial<{

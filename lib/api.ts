@@ -1,4 +1,5 @@
 import "server-only";
+import { logActivity, touchLastSeen } from "./activity";
 import { houseKeyAvailable } from "./ai";
 import { currentCaller } from "./auth";
 import { houseCallsToday, limits } from "./claude";
@@ -12,14 +13,22 @@ export { ApiError };
 
 /** Run a handler for the signed-in seeker, with consistent errors. */
 export async function withSeeker(handler: (s: SeekerRecord) => Promise<Response>): Promise<Response> {
+  let seeker: SeekerRecord | null = null;
   try {
     if (!hasDb()) throw new ApiError(503, "Accounts are not switched on yet. Try the demo in the meantime.");
     const caller = await currentCaller();
     if (!caller) throw new ApiError(401, "Sign in to use your headhunter.");
-    const seeker = await getOrCreateSeeker(caller.userId, caller.email);
+    seeker = await getOrCreateSeeker(caller.userId, caller.email);
+    await touchLastSeen(seeker.id);
     return await handler(seeker);
   } catch (e) {
-    if (e instanceof ApiError) return Response.json({ error: e.message }, { status: e.status });
+    if (e instanceof ApiError) {
+      // Plan limits and caps, so the owner can see who is running into them.
+      if (seeker && (e.status === 402 || (e.status === 429 && !/^I hunted/.test(e.message)) || (e.status === 503 && /capacity/.test(e.message)))) {
+        await logActivity(seeker.id, "limit_hit", { status: e.status, message: e.message });
+      }
+      return Response.json({ error: e.message }, { status: e.status });
+    }
     console.error(e);
     return Response.json({ error: "Something went wrong on our side. Try again in a moment." }, { status: 500 });
   }

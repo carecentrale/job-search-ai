@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { ApiError, readJson, stateResponse, withSeeker } from "@/lib/api";
 import { huntFor } from "@/lib/hunt/run";
 import type { Brief } from "@/lib/hunt/types";
@@ -47,6 +48,14 @@ export async function PUT(req: Request) {
       seeker = (await getSeeker(s.id))!;
       hunt = { read: b.postingsRead, found: b.newMatches.length, boardErrors: b.errors.length };
     }
+    await logActivity(s.id, "brief_saved", {
+      roles: brief.targetTitles,
+      strengths: brief.skills.length,
+      cities: brief.locations,
+      remoteOk: brief.remoteOk,
+      avoid: brief.avoid,
+      hunt,
+    });
     return stateResponse(seeker, { hunt });
   });
 }

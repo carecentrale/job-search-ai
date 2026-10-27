@@ -28,7 +28,7 @@ function huntSummary(h: NonNullable<Reply["hunt"]>) {
   return `I read ${h.read} postings and shortlisted ${h.found}.`;
 }
 
-export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
+export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boolean; isAdmin?: boolean }) {
   const [state, setState] = useState<WorkspaceState | null>(null);
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState<Tab>("today");
@@ -117,6 +117,7 @@ export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
         clerk={clerk}
         tabs={state.onboarded ? { tab, setTab, shortlist: state.matches.length } : undefined}
         onPlan={() => setTab("plan")}
+        isAdmin={isAdmin}
         needsKey={state.claude.mode !== "own" && state.claude.canSaveKey && tab !== "plan"}
       />
 
@@ -293,11 +294,13 @@ function Top({
   tabs,
   onPlan,
   needsKey,
+  isAdmin,
 }: {
   clerk: boolean;
   tabs?: { tab: Tab; setTab: (t: Tab) => void; shortlist: number };
   onPlan?: () => void;
   needsKey?: boolean;
+  isAdmin?: boolean;
 }) {
   return (
     <header className="ws-top">
@@ -329,6 +332,7 @@ function Top({
               {onPlan && (
                 <UserButton.MenuItems>
                   <UserButton.Action label="AI key and plan" labelIcon={<KeyIcon />} onClick={onPlan} />
+                  {isAdmin ? <UserButton.Link label="Admin" labelIcon={<AdminIcon />} href="/admin" /> : null}
                 </UserButton.MenuItems>
               )}
             </UserButton>
@@ -438,6 +442,14 @@ function detectProvider(key: string): "anthropic" | "openai" | null {
   if (k.startsWith("sk-ant-")) return "anthropic";
   if (k.startsWith("sk-")) return "openai";
   return null;
+}
+
+function AdminIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z" />
+    </svg>
+  );
 }
 
 function KeyIcon() {

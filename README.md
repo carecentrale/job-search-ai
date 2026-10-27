@@ -17,6 +17,8 @@ Live at **https://fuzzyhr.vercel.app** · Built by [Nicola Delnero](https://link
 
 Signed-out visitors get a demo at `/app` with sample data.
 
+- **Admin (owner only).** `/admin` shows headline numbers, spend on your Claude key against today's cap, every user (searchable), and a per-user page with their brief, CV, applications, AI usage, briefings and a full activity timeline. `/admin/activity` is a live feed of everything across the site, filterable by event. Admins are set with `ADMIN_EMAILS`; everyone else gets a 404. Users' AI keys are never shown, only their last 4 characters.
+
 ## Stack
 
 | Part | Choice |
@@ -45,6 +47,7 @@ Set these in Vercel → Project → Settings → Environment Variables.
 | `HOUSE_DAILY_LIMIT_TOTAL` | Optional | Claude requests per day across all users on fuzzyHR's key (default 200). Your ceiling on spend. |
 | `ANTHROPIC_MODEL` | Optional | Claude model, defaults to `claude-sonnet-5-5` |
 | `OPENAI_MODEL` | Optional | Forces one model for OpenAI keys instead of picking the newest |
+| `ADMIN_EMAILS` | You | Comma-separated sign-in emails that can open `/admin` (or `ADMIN_USER_IDS` with Clerk user ids) |
 | `CRON_SECRET` | You, any long random string | Lets Vercel Cron run the morning hunt; every other caller is refused |
 
 Changes to environment variables apply on the next deploy.
@@ -57,6 +60,7 @@ app/
   app/page.tsx                  Workspace: live if signed in, demo otherwise
   app/doc/[id]/page.tsx         Tailored CV and cover letter, 3 templates, print to PDF
   sign-in/, sign-up/            Clerk forms
+  admin/                        Owner-only: overview and users, activity feed, user detail
   api/me/...                    The signed-in user's workspace API
     cv                          Upload CV, get a suggested brief
     brief                       Save brief, rescan the last 3 weeks
@@ -69,6 +73,8 @@ components/workspace/           Live.tsx, Demo.tsx, shared parts.tsx
 lib/
   hunt/                         Scoring, sources, follow-up rules, sample data
   ai.ts                         Prompts, schemas, Claude and OpenAI clients, model picking
+  activity.ts, describe.ts      Activity log and its readable descriptions
+  admin.ts                      Admin access check and queries
   claude.ts                     Which key pays, daily caps, usage tracking
   crypto.ts                     Encryption for saved keys
   db.ts, seekers.ts, store.ts   Database

@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { suggestBrief } from "@/lib/ai";
 import { ApiError, readJson, stateResponse, withSeeker } from "@/lib/api";
 import { chooseClaude, recordUse, reserveCall } from "@/lib/claude";
@@ -31,9 +32,11 @@ async function pdfText(file: File): Promise<string> {
 export async function POST(req: Request) {
   return withSeeker(async (s) => {
     let text: string;
+    let format = "pasted text";
     if ((req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
       const file = (await req.formData()).get("file");
       if (!(file instanceof File)) throw new ApiError(400, "Choose a file to upload.");
+      format = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf" ? "PDF" : "text file";
       if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) text = await pdfText(file);
       else if (file.type.startsWith("text/") || file.name.toLowerCase().endsWith(".txt")) text = await file.text();
       else throw new ApiError(415, "Upload a PDF or a .txt file, or paste the text.");
@@ -63,6 +66,7 @@ export async function POST(req: Request) {
         if (!(e instanceof ApiError)) console.error("suggestBrief failed", (e as Error).message);
       }
     }
+    await logActivity(s.id, "cv_uploaded", { format, chars: text.length, briefSuggested: Boolean(suggestedBrief) });
     return stateResponse(saved, { suggestedBrief });
   });
 }

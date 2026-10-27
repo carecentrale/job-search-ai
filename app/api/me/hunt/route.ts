@@ -1,3 +1,4 @@
+import { logActivity } from "@/lib/activity";
 import { ApiError, stateResponse, withSeeker } from "@/lib/api";
 import { huntFor } from "@/lib/hunt/run";
 import { getSeeker, isOnboarded } from "@/lib/seekers";
@@ -20,6 +21,7 @@ export async function POST() {
     const now = new Date();
     const b = await huntFor(s, false, now);
     await recordBriefing(s, b, now);
+    await logActivity(s.id, "hunt", { trigger: "manual", read: b.postingsRead, found: b.newMatches.length, boardErrors: b.errors.length });
     return stateResponse((await getSeeker(s.id))!, {
       hunt: { read: b.postingsRead, found: b.newMatches.length, boardErrors: b.errors.length },
     });

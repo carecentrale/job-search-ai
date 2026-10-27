@@ -10,6 +10,7 @@
 - [x] **Neon** connected to fuzzyhr as `DATABASE_URL`: accounts and saved data
 - [ ] **ENCRYPTION_KEY** (Environment Variables): any long random string, so users can save their own Claude key
 - [ ] **ANTHROPIC_API_KEY** (optional): fuzzyHR's key for free-week users. Skip it to run on users' own keys only.
+- [ ] **ADMIN_EMAILS**: your sign-in email, so you can open /admin
 - [ ] **CRON_SECRET** (Environment Variables): any long random string, so the 7 am hunt can run
 - [ ] Redeploy once all four are in, then sign up on the live site to test
 
