@@ -59,7 +59,12 @@ export function JobRow({
           {job.url && job.url !== "#" ? <a href={job.url} target="_blank" rel="noopener noreferrer">{job.title}</a> : job.title}
         </p>
         <p className="muted small">
-          {job.company}, {job.location || "location not stated"}. Posted {ago(job.postedAt)}.{via ? <span className="via"> {via}</span> : null}
+          {job.company}, {job.location || "location not stated"}. Posted {ago(job.postedAt)}.
+          {job.source === "adzuna" && !job.addedByYou ? (
+            <span className="via"> <a href="https://www.adzuna.ca" target="_blank" rel="noopener noreferrer">Jobs by Adzuna</a></span>
+          ) : via ? (
+            <span className="via"> {via}</span>
+          ) : null}
         </p>
         {r && v ? (
           <>

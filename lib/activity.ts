@@ -29,7 +29,9 @@ export type ActivityType =
   | "autopilot_changed"
   | "company_added"
   | "company_removed"
-  | "job_link_added";
+  | "job_link_added"
+  | "data_exported"
+  | "account_deleted";
 
 export async function logActivity(userId: string, type: ActivityType, detail: Record<string, unknown> = {}): Promise<void> {
   try {

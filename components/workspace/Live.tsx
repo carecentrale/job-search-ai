@@ -171,6 +171,18 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
   const saveKey = (apiKey: string) =>
     act("key", () => call("/api/me/claude-key", json("PUT", { apiKey })), () => "Key saved. fuzzyHR is now free for you, with no limits.");
   const removeKey = () => act("key", () => call("/api/me/claude-key", { method: "DELETE" }), () => "Key removed");
+  const deleteAccount = async () => {
+    setBusy("delete");
+    try {
+      const res = await fetch("/api/me", json("DELETE", { confirm: "DELETE" }));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "I couldn't delete your account. Try again.");
+      window.location.replace(`${window.location.origin}/`);
+    } catch (e) {
+      setToast({ text: (e as Error).message, error: true });
+      setBusy(null);
+    }
+  };
 
   const nudgeAction = (appId: string, kind: string) => {
     if (kind === "follow-up") followedUp(appId);
@@ -218,7 +230,10 @@ export default function LiveWorkspace({ clerk, isAdmin = false }: { clerk: boole
           </div>
         )}
         {tab === "plan" ? (
-          <PlanPanel state={state} busy={busy === "key"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} />
+          <>
+            <PlanPanel state={state} busy={busy === "key"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} />
+            <DataPanel busy={busy === "delete"} onDelete={deleteAccount} />
+          </>
         ) : !state.onboarded ? (
           <Onboarding state={state} suggested={suggested} busy={busy} onCv={uploadCv} onBrief={saveBrief} />
         ) : (
@@ -792,5 +807,40 @@ function HuntSettings({
         </ul>
       )}
     </div>
+  );
+}
+
+function DataPanel({ busy, onDelete }: { busy: boolean; onDelete: () => void }) {
+  const [confirm, setConfirm] = useState("");
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="panel plan-page" style={{ marginTop: 16 }}>
+      <h2>Your data</h2>
+      <p className="muted small">
+        Everything I store about you: your CV, brief, matches, applications, documents and activity. See the <Link href="/privacy">Privacy Policy</Link> and <Link href="/terms">Terms of Use</Link>.
+      </p>
+      <div><a className="btn btn-small btn-ghost" href="/api/me/export" download>Download my data</a></div>
+      <div className="danger-zone">
+        {!open ? (
+          <button className="textbtn small" onClick={() => setOpen(true)}>Delete my account</button>
+        ) : (
+          <form
+            className="key-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onDelete();
+            }}
+          >
+            <p className="warn small">This permanently deletes your account, CV, applications, documents and saved key. It can&apos;t be undone. Download your data first if you want a copy.</p>
+            <label htmlFor="confirm-delete" className="small">Type DELETE to confirm</label>
+            <input id="confirm-delete" autoComplete="off" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <button className="btn btn-small btn-danger" type="submit" disabled={busy || confirm !== "DELETE"}>{busy ? "Deleting…" : "Delete everything"}</button>
+              <button className="textbtn small" type="button" onClick={() => { setOpen(false); setConfirm(""); }}>Cancel</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </section>
   );
 }

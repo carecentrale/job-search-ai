@@ -29,6 +29,8 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   company_added: "Followed a company",
   company_removed: "Unfollowed a company",
   job_link_added: "Added a job link",
+  data_exported: "Downloaded their data",
+  account_deleted: "Deleted their account",
 };
 
 export function describe(type: string, d: D): string {
@@ -87,6 +89,10 @@ function describeEvent(type: string, d: D): string {
       return `Stopped following ${s(d.company)}.`;
     case "job_link_added":
       return `Added ${s(d.title)}${at(d)} by link (read via ${s(d.via)}, fit ${s(d.fit)}).`;
+    case "data_exported":
+      return "Downloaded a copy of their data.";
+    case "account_deleted":
+      return `An account was deleted at the user's request${d.applications != null ? ` (it had ${n(d.applications)} applications)` : ""}. Its data is gone.`;
     default:
       return JSON.stringify(d);
   }

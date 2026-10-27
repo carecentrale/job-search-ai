@@ -12,8 +12,14 @@
 - [ ] **ANTHROPIC_API_KEY** (optional): fuzzyHR's key for free-week users. Skip it to run on users' own keys only.
 - [x] **Admin**: the first account (yours) is admin automatically; no setting needed
 - [ ] **CRON_SECRET** (Environment Variables): any long random string, so the 7 am hunt can run
-- [ ] Optional, more jobs: free keys from developer.adzuna.com (`ADZUNA_APP_ID`, `ADZUNA_APP_KEY`) and jooble.org/api/about (`JOOBLE_API_KEY`)
+- [ ] Optional, more jobs: free keys from developer.adzuna.com (`ADZUNA_APP_ID`, `ADZUNA_APP_KEY`) and jooble.org/api/about (`JOOBLE_API_KEY`). Adzuna's terms allow a 14-day trial for commercial use; after that it needs a licence agreement with Adzuna, and their logo as attribution. Check Jooble's partner terms too.
 - [ ] Redeploy once these are in, then sign up on the live site to test
+
+## Legal (Privacy Policy at /privacy, Terms at /terms; business details in lib/legal.ts)
+- [ ] Have a Quebec lawyer review both before taking payments
+- [ ] French versions: Quebec's Charter of the French Language requires French versions of the Terms (a standard-form contract) and the site for Quebec users
+- [ ] Keep a short written privacy impact assessment for storing data in the US (Law 25, s. 17)
+- [ ] Sign up for each provider's data processing terms where offered (Vercel, Neon, Clerk, Anthropic, OpenAI)
 
 ## Later
 - [ ] Paid plans with Stripe ($29 Personal, $99 Coach)

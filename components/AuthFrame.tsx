@@ -16,7 +16,12 @@ export default function AuthFrame({ title, lede, children }: { title: string; le
             <h1>{title}</h1>
             <p className="lede">{lede}</p>
           </div>
-          <div className="auth-form">{children}</div>
+          <div className="auth-form">
+            {children}
+            <p className="auth-legal">
+              By continuing, you agree to the <Link href="/terms">Terms of Use</Link> and <Link href="/privacy">Privacy Policy</Link>.
+            </p>
+          </div>
         </div>
       </main>
     </div>

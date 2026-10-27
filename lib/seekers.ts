@@ -154,6 +154,34 @@ export async function updateSeeker(userId: string, p: Patch): Promise<SeekerReco
   return toRecord(rows[0]);
 }
 
+/**
+ * Delete everything stored about a user: profile, CV, brief, applications,
+ * documents, saved key, briefings, usage and activity. Not reversible.
+ */
+export async function deleteSeekerData(userId: string): Promise<void> {
+  const sql = await db();
+  await sql.begin(async (tx) => {
+    await tx`delete from activity where user_id = ${userId}`;
+    await tx`delete from claude_usage where user_id = ${userId}`;
+    await tx`delete from briefings where user_id = ${userId}`;
+    await tx`delete from seekers where user_id = ${userId}`;
+  });
+}
+
+/** Everything stored about a user, minus their encrypted key, for "Download my data". */
+export async function exportSeekerData(userId: string) {
+  const sql = await db();
+  const [seeker] = await sql`
+    select user_id, email, plan, role, created_at, trial_ends_at, last_seen_at, last_hunt_at,
+      brief, cv_text, applications, matches, passed, extra_boards, agent,
+      case when claude_key_enc is not null then json_build_object('provider', coalesce(ai_provider, 'anthropic'), 'model', ai_model, 'endsWith', claude_key_last4, 'addedAt', claude_key_added_at) end as ai_key
+    from seekers where user_id = ${userId}`;
+  const briefings = await sql`select date, data, created_at from briefings where user_id = ${userId} order by date desc`;
+  const usage = await sql`select day, source, calls, input_tokens, output_tokens from claude_usage where user_id = ${userId} order by day desc`;
+  const activity = await sql`select at, type, detail from activity where user_id = ${userId} order by at desc`;
+  return { exportedAt: new Date().toISOString(), account: seeker ?? null, briefings, aiUsage: usage, activity };
+}
+
 export async function saveBriefing(b: Briefing): Promise<void> {
   const sql = await db();
   await sql`

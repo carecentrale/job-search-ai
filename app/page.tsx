@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteFooter } from "@/components/LegalPage";
 const work = [
   {
     verb: "Brief",
@@ -274,12 +275,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="footer">
-        <div className="wrap footer-inner">
-          <span>fuzzyHR</span>
-          <span>Built by Nicola Delnero with Claude</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }
