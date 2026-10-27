@@ -7,7 +7,7 @@ import type { WorkspaceState } from "@/lib/api";
 import type { ApplicationStatus, Brief, ScoredJob } from "@/lib/hunt/types";
 import { AppCard, BriefEditor, COLUMNS, JobRow, STATUS_LABEL } from "./parts";
 
-type Tab = "today" | "shortlist" | "tracker" | "brief";
+type Tab = "today" | "shortlist" | "tracker" | "brief" | "plan";
 type Reply = { state: WorkspaceState; suggestedBrief?: Brief | null; hunt?: { read: number; found: number; boardErrors: number } | null };
 
 async function call(path: string, init?: RequestInit): Promise<Reply> {
@@ -101,6 +101,10 @@ export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
       },
     );
 
+  const saveKey = (apiKey: string) =>
+    act("key", () => call("/api/me/claude-key", json("PUT", { apiKey })), () => "Key saved. fuzzyHR is now free for you, with no limits.");
+  const removeKey = () => act("key", () => call("/api/me/claude-key", { method: "DELETE" }), () => "Key removed");
+
   const nudgeAction = (appId: string, kind: string) => {
     if (kind === "follow-up") followedUp(appId);
     else if (kind === "finish-application") setStatus(appId, "applied");
@@ -112,18 +116,25 @@ export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
       <Top clerk={clerk} tabs={state.onboarded ? { tab, setTab, shortlist: state.matches.length } : undefined} />
 
       <div className="wrap trial-bar">
-        {trial.plan === "trial" &&
-          (trial.ended ? (
-            <span className="warn">Your free week has ended. Paid plans open soon, and everything you made stays here.</span>
-          ) : (
-            <span className="muted">
-              Free week: {trial.daysLeft} day{trial.daysLeft === 1 ? "" : "s"} left. {trial.used} of {trial.limit} tailored applications used.
-            </span>
-          ))}
+        {state.claude.mode === "own" ? (
+          <span className="muted">Free with your own Claude key. No limits.</span>
+        ) : trial.ended || state.claude.mode === "none" ? (
+          <span className="warn">
+            {trial.ended ? "Your free week has ended. " : ""}Add your own Claude key to use fuzzyHR for free.{" "}
+            <button className="textbtn small" onClick={() => setTab("plan")}>Add your key</button>
+          </span>
+        ) : (
+          <span className="muted">
+            Free week: {trial.daysLeft} day{trial.daysLeft === 1 ? "" : "s"} left. {trial.used} of {trial.limit} tailored applications used.{" "}
+            <button className="textbtn small" onClick={() => setTab("plan")}>Use your own key for no limits</button>
+          </span>
+        )}
       </div>
 
       <main className="wrap ws-main">
-        {!state.onboarded ? (
+        {tab === "plan" ? (
+          <PlanPanel state={state} busy={busy === "key"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} />
+        ) : !state.onboarded ? (
           <Onboarding state={state} suggested={suggested} busy={busy} onCv={uploadCv} onBrief={saveBrief} />
         ) : (
           <>
@@ -212,7 +223,7 @@ export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
                             {a.tailored ? (
                               <>
                                 <Link className="btn btn-small btn-ghost" href={`/app/doc/${encodeURIComponent(a.id)}`}>View CV and letter</Link>
-                                {state.ai && (a.writes ?? 1) < 3 && (
+                                {state.ai && (state.claude.mode === "own" || (a.writes ?? 1) < 3) && (
                                   <button className="textbtn small" disabled={busy === `tailor:${a.id}`} onClick={() => tailor(a.id, a.job.company)}>
                                     {busy === `tailor:${a.id}` ? "Writing…" : "Write again"}
                                   </button>
@@ -223,7 +234,7 @@ export default function LiveWorkspace({ clerk }: { clerk: boolean }) {
                                 {busy === `tailor:${a.id}` ? "Writing… about 30 seconds" : "Write my CV and letter"}
                               </button>
                             ) : (
-                              <span className="muted small">Writing switches on soon.</span>
+                              <button className="textbtn small" onClick={() => setTab("plan")}>Add your Claude key to write this</button>
                             )}
                           </AppCard>
                         ))}
@@ -285,6 +296,7 @@ function Top({ clerk, tabs }: { clerk: boolean; tabs?: { tab: Tab; setTab: (t: T
                 ["shortlist", `Shortlist${tabs.shortlist ? ` (${tabs.shortlist})` : ""}`],
                 ["tracker", "Tracker"],
                 ["brief", "Your brief"],
+                ["plan", "Plan"],
               ] as [Tab, string][]
             ).map(([id, label]) => (
               <button key={id} className={tabs.tab === id ? "on" : ""} onClick={() => tabs.setTab(id)} aria-current={tabs.tab === id ? "page" : undefined}>
@@ -388,6 +400,88 @@ function Onboarding({
           submitLabel={busy === "brief" ? "Hunting…" : "Start hunting"}
         />
       )}
+    </section>
+  );
+}
+
+function PlanPanel({
+  state,
+  busy,
+  onSave,
+  onRemove,
+  onBack,
+}: {
+  state: WorkspaceState;
+  busy: boolean;
+  onSave: (key: string) => void;
+  onRemove: () => void;
+  onBack: () => void;
+}) {
+  const [key, setKey] = useState("");
+  const c = state.claude;
+  return (
+    <section className="plan-page">
+      <div className="panel">
+        <div className="panel-head">
+          <h1>Your plan</h1>
+          {!state.onboarded && <button className="textbtn small" onClick={onBack}>Back to setup</button>}
+        </div>
+        {c.mode === "own" ? (
+          <p>You&apos;re on <strong>Free with your own key</strong>. Hunting, shortlists, reminders and unlimited CVs and cover letters, at no charge from fuzzyHR. Anthropic bills your account for what Claude writes.</p>
+        ) : state.trial.ended ? (
+          <p>Your free week has ended. Add your own Claude key below and fuzzyHR stays free, with no limits. Everything you made is still here.</p>
+        ) : c.houseKeyAvailable ? (
+          <>
+            <p>You&apos;re on the <strong>free week</strong>, with Claude on us: {state.trial.daysLeft} day{state.trial.daysLeft === 1 ? "" : "s"} left, {state.trial.used} of {state.trial.limit} tailored applications used.</p>
+            <p className="muted small">Today: {c.usedToday} of {c.dailyLimit} writing requests used. They reset at midnight Eastern.</p>
+          </>
+        ) : (
+          <p>Add your own Claude key to switch on writing. With your own key, fuzzyHR is free.</p>
+        )}
+      </div>
+
+      <div className="panel key-panel">
+        <h2>Your Claude API key</h2>
+        {c.keyLast4 ? (
+          <>
+            <p>Saved key ending in <strong className="mono">…{c.keyLast4}</strong>. It&apos;s encrypted, used only to write your own documents, and never shown again, not even to you.</p>
+            <div><button className="btn btn-small btn-ghost" disabled={busy} onClick={onRemove}>{busy ? "Removing…" : "Remove key"}</button></div>
+            <p className="muted small">To switch keys, remove this one and add the new one.</p>
+          </>
+        ) : !c.canSaveKey ? (
+          <p className="muted">Saving keys is switched off on the server right now. Check back soon.</p>
+        ) : (
+          <form
+            className="key-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSave(key);
+              setKey("");
+            }}
+          >
+            <p className="muted">
+              Add your key and fuzzyHR is free, with no daily or free-week limits. You pay Anthropic directly for what Claude writes for you.
+            </p>
+            <ol className="small key-steps">
+              <li>Sign in at <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> and add some credit under Billing.</li>
+              <li>Under API Keys, create a key and copy it. It starts with <span className="mono">sk-ant-</span>.</li>
+              <li>Paste it here. I check it with Anthropic before saving.</li>
+            </ol>
+            <label htmlFor="claude-key" className="small">API key</label>
+            <input
+              id="claude-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="sk-ant-…"
+            />
+            <div><button className="btn btn-small" type="submit" disabled={busy || key.trim().length < 20}>{busy ? "Checking…" : "Save key"}</button></div>
+            <p className="muted small">Stored encrypted. Remove it any time. Tip: set a monthly spend limit for the key in the Anthropic console.</p>
+          </form>
+        )}
+      </div>
     </section>
   );
 }

@@ -1,15 +1,14 @@
 import "server-only";
-import { aiEnabled } from "./ai";
+import { houseKeyAvailable } from "./ai";
 import { currentCaller } from "./auth";
+import { houseCallsToday, limits } from "./claude";
+import { canStoreSecrets } from "./crypto";
 import { hasDb } from "./db";
+import { ApiError } from "./errors";
 import { nudgesFor } from "./hunt/followup";
-import { getOrCreateSeeker, isOnboarded, latestBriefing, trialStatus, type SeekerRecord } from "./seekers";
+import { getOrCreateSeeker, hasOwnKey, isOnboarded, latestBriefing, trialStatus, type SeekerRecord } from "./seekers";
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-  }
-}
+export { ApiError };
 
 /** Run a handler for the signed-in seeker, with consistent errors. */
 export async function withSeeker(handler: (s: SeekerRecord) => Promise<Response>): Promise<Response> {
@@ -34,8 +33,11 @@ export async function readJson<T>(req: Request): Promise<T> {
   }
 }
 
-/** Everything the workspace needs to draw itself. */
+/** Everything the workspace needs to draw itself. Never includes the user's key, only its last 4 characters. */
 export async function stateFor(s: SeekerRecord) {
+  const own = hasOwnKey(s);
+  const trial = trialStatus(s);
+  const house = houseKeyAvailable() && !trial.ended;
   return {
     brief: s.brief,
     cv: s.cvText ? { chars: s.cvText.length, preview: s.cvText.slice(0, 280) } : null,
@@ -45,8 +47,17 @@ export async function stateFor(s: SeekerRecord) {
     nudges: nudgesFor(s.applications),
     briefing: await latestBriefing(s.id),
     lastHuntAt: s.lastHuntAt,
-    trial: trialStatus(s),
-    ai: aiEnabled(),
+    trial,
+    /** Can Claude write for this user right now (subject to daily caps on fuzzyHR's key)? */
+    ai: own || house,
+    claude: {
+      mode: own ? ("own" as const) : house ? ("house" as const) : ("none" as const),
+      keyLast4: s.claudeKeyLast4,
+      canSaveKey: canStoreSecrets(),
+      houseKeyAvailable: houseKeyAvailable(),
+      usedToday: own ? null : await houseCallsToday(s.id),
+      dailyLimit: own ? null : limits().perUser,
+    },
   };
 }
 

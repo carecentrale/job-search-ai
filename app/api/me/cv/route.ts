@@ -1,5 +1,6 @@
-import { aiEnabled, suggestBrief } from "@/lib/ai";
+import { suggestBrief } from "@/lib/ai";
 import { ApiError, readJson, stateResponse, withSeeker } from "@/lib/api";
+import { chooseClaude, recordUse, reserveCall } from "@/lib/claude";
 import type { Brief } from "@/lib/hunt/types";
 import { updateSeeker } from "@/lib/seekers";
 
@@ -48,12 +49,18 @@ export async function POST(req: Request) {
 
     const saved = await updateSeeker(s.id, { cvText: text });
 
+    // A pre-filled brief is a nice-to-have: if Claude isn't available or the daily cap is reached,
+    // the user just fills the brief in themselves.
     let suggestedBrief: Brief | null = null;
-    if (aiEnabled() && saved.brief.targetTitles.length === 0) {
+    if (saved.brief.targetTitles.length === 0) {
       try {
-        suggestedBrief = await suggestBrief(text);
+        const claude = chooseClaude(saved);
+        await reserveCall(saved, claude);
+        const out = await suggestBrief(claude.client, text);
+        await recordUse(saved, claude, out.use);
+        suggestedBrief = out.data;
       } catch (e) {
-        console.error("suggestBrief failed", e);
+        if (!(e instanceof ApiError)) console.error("suggestBrief failed", (e as Error).message);
       }
     }
     return stateResponse(saved, { suggestedBrief });

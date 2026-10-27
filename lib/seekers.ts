@@ -15,6 +15,9 @@ export type SeekerRecord = Seeker & {
   plan: "trial" | "personal" | "coach";
   trialEndsAt: string;
   createdAt: string;
+  /** Their own Claude key, encrypted. Server-side only: never send this to the browser. */
+  claudeKeyEnc: string | null;
+  claudeKeyLast4: string | null;
 };
 
 type Row = {
@@ -30,6 +33,8 @@ type Row = {
   trial_ends_at: Date;
   last_hunt_at: Date | null;
   created_at: Date;
+  claude_key_enc: string | null;
+  claude_key_last4: string | null;
 };
 
 const EMPTY_BRIEF: Brief = { name: "", targetTitles: [], skills: [], locations: [], remoteOk: true, avoid: [] };
@@ -48,6 +53,8 @@ function toRecord(r: Row): SeekerRecord {
     trialEndsAt: r.trial_ends_at.toISOString(),
     lastHuntAt: r.last_hunt_at ? r.last_hunt_at.toISOString() : null,
     createdAt: r.created_at.toISOString(),
+    claudeKeyEnc: r.claude_key_enc,
+    claudeKeyLast4: r.claude_key_last4,
   };
 }
 
@@ -56,12 +63,18 @@ export function isOnboarded(s: SeekerRecord): boolean {
   return Boolean(s.cvText) && s.brief.targetTitles.length > 0;
 }
 
+/** With their own Claude key, fuzzyHR is free and unlimited for them. */
+export function hasOwnKey(s: SeekerRecord): boolean {
+  return Boolean(s.claudeKeyEnc);
+}
+
 export function trialStatus(s: SeekerRecord, now = new Date()) {
   const used = s.applications.filter((a) => a.tailored).length;
+  if (hasOwnKey(s)) return { plan: "own-key" as const, daysLeft: 0, ended: false, used, limit: null };
   // Allow a minute of clock drift between the database and the server, so a new trial reads 7 days, not 8.
   const daysLeft = Math.max(0, Math.ceil((new Date(s.trialEndsAt).getTime() - now.getTime() - 60_000) / 86_400_000));
   return {
-    plan: s.plan,
+    plan: s.plan as SeekerRecord["plan"] | "own-key",
     daysLeft,
     ended: s.plan === "trial" && daysLeft === 0,
     used,
@@ -94,6 +107,8 @@ type Patch = Partial<{
   passed: string[];
   matches: ScoredJob[];
   lastHuntAt: Date;
+  /** Encrypted key and its last 4 characters, or null to remove. */
+  claudeKey: { enc: string; last4: string } | null;
 }>;
 
 /** Update only the fields given. */
@@ -106,6 +121,11 @@ export async function updateSeeker(userId: string, p: Patch): Promise<SeekerReco
   if (p.passed) set.passed = sql.json(p.passed);
   if (p.matches) set.matches = sql.json(p.matches);
   if (p.lastHuntAt) set.last_hunt_at = p.lastHuntAt;
+  if (p.claudeKey !== undefined) {
+    set.claude_key_enc = p.claudeKey?.enc ?? null;
+    set.claude_key_last4 = p.claudeKey?.last4 ?? null;
+    set.claude_key_added_at = p.claudeKey ? new Date() : null;
+  }
   const rows = await sql<Row[]>`update seekers set ${sql(set)} where user_id = ${userId} returning *`;
   if (!rows[0]) throw new Error(`No seeker ${userId}`);
   return toRecord(rows[0]);
@@ -125,12 +145,12 @@ export async function latestBriefing(userId: string): Promise<Briefing | null> {
   return rows[0]?.data ?? null;
 }
 
-/** Seekers the daily hunt should run for: onboarded, and either paying or still in their free week. */
+/** Seekers the daily hunt should run for: onboarded, and using their own key, paying, or still in their free week. */
 export async function listActiveSeekers(): Promise<SeekerRecord[]> {
   const sql = await db();
   const rows = await sql<Row[]>`
     select * from seekers
     where cv_text is not null and brief is not null
-      and (plan <> 'trial' or trial_ends_at > now())`;
+      and (claude_key_enc is not null or plan <> 'trial' or trial_ends_at > now())`;
   return rows.map(toRecord).filter(isOnboarded);
 }

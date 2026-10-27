@@ -51,6 +51,19 @@ async function migrate(db: Sql): Promise<void> {
       created_at timestamptz not null default now(),
       primary key (user_id, date)
     )`;
+  await db`alter table seekers add column if not exists claude_key_enc text`;
+  await db`alter table seekers add column if not exists claude_key_last4 text`;
+  await db`alter table seekers add column if not exists claude_key_added_at timestamptz`;
+  await db`
+    create table if not exists claude_usage (
+      user_id       text not null,
+      day           date not null,
+      source        text not null,
+      calls         integer not null default 0,
+      input_tokens  bigint not null default 0,
+      output_tokens bigint not null default 0,
+      primary key (user_id, day, source)
+    )`;
 }
 
 export async function db(): Promise<Sql> {

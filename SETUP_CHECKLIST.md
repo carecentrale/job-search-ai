@@ -6,9 +6,10 @@
 - [x] Landing page, demo workspace, morning hunt, live workspace, tailored CV and cover letter, tracker, free week
 
 ## To switch everything on (in Vercel, project **fuzzyhr**)
-- [ ] **Clerk** (Integrations → Clerk → Add, connect to fuzzyhr): sign-up and sign-in
-- [ ] **Neon** (Storage → Create Database → Neon, US East, connect to fuzzyhr): accounts and saved data
-- [ ] **ANTHROPIC_API_KEY** (Environment Variables): CV reading and writing. Key from console.anthropic.com, with some credit added under Billing.
+- [x] **Clerk** connected to fuzzyhr: sign-up and sign-in
+- [x] **Neon** connected to fuzzyhr as `DATABASE_URL`: accounts and saved data
+- [ ] **ENCRYPTION_KEY** (Environment Variables): any long random string, so users can save their own Claude key
+- [ ] **ANTHROPIC_API_KEY** (optional): fuzzyHR's key for free-week users. Skip it to run on users' own keys only.
 - [ ] **CRON_SECRET** (Environment Variables): any long random string, so the 7 am hunt can run
 - [ ] Redeploy once all four are in, then sign up on the live site to test
 

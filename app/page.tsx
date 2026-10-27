@@ -30,32 +30,48 @@ const templates = [
 
 const plans = [
   {
-    name: "Trial",
+    name: "Your own key",
+    price: "$0",
+    period: "for good",
+    features: [
+      "Bring your own Claude API key",
+      "Unlimited tailored CVs and cover letters",
+      "Daily hunting, shortlist and follow-up reminders",
+      "You pay Anthropic directly for what Claude writes",
+    ],
+    cta: "Start free",
+    soon: false,
+    featured: true,
+  },
+  {
+    name: "Free week",
     price: "$0",
     period: "for 7 days",
-    features: ["Your brief and daily shortlist", "5 tailored applications", "All 3 CV templates"],
+    features: ["Claude on us, no key needed", "5 tailored applications", "Daily hunting and shortlist", "Add your key any time to keep going free"],
     cta: "Start your free week",
+    soon: false,
     featured: false,
   },
   {
     name: "Personal",
     price: "$29",
     period: "per month",
-    features: ["Unlimited tailored applications", "Match the style of any CV you like", "Application tracker and follow-up reminders"],
-    cta: "Hire your headhunter",
-    featured: true,
-  },
-  {
-    name: "Coach",
-    price: "$99",
-    period: "per month",
-    features: ["Up to 5 job seekers", "Shared templates", "Built for career coaches and outplacement"],
-    cta: "Set up for clients",
+    features: ["Claude on us, no key needed", "Unlimited tailored applications", "Match the style of any CV you like"],
+    cta: "Coming soon",
+    soon: true,
     featured: false,
   },
 ];
 
 const faqs = [
+  {
+    q: "How can it be free?",
+    a: "fuzzyHR's hunting, shortlists and tracker cost very little to run. The expensive part is Claude writing your CV and cover letters. Add your own Claude API key and that bill goes to your Anthropic account instead, so fuzzyHR costs you nothing. Without a key, you get a free week with Claude on us.",
+  },
+  {
+    q: "What's a Claude API key, and is mine safe?",
+    a: "It's a password-like key from console.anthropic.com that lets an app use Claude on your Anthropic account. fuzzyHR checks it with Anthropic, stores it encrypted, uses it only to write your own documents, and never shows it again. You can remove it at any time, and set a monthly spend limit for it in the Anthropic console.",
+  },
   {
     q: "Does it apply to jobs for me?",
     a: "No. It finds the roles and prepares everything, then you review and press send. Nothing goes out in your name without you.",
@@ -121,7 +137,7 @@ export default function Home() {
                 </>
               )}
             </div>
-            <p className="fine">{signupOn ? "7 days free. No card needed." : "Early access. The demo is open now and sign-up opens soon."}</p>
+            <p className="fine">{signupOn ? "Free with your own Claude key, or 7 days on us. No card needed." : "Early access. The demo is open now and sign-up opens soon."}</p>
           </div>
 
           <aside className="briefing" aria-label="Example of a morning briefing from your headhunter">
@@ -223,8 +239,8 @@ export default function Home() {
         <section id="pricing" className="band">
           <div className="wrap">
             <div className="section-head">
-              <h2 className="section-title">Cheaper than one lunch with a recruiter</h2>
-              <p>{signupOn ? "Every plan starts with a free week. Keep it only if it earns its place in your search." : "Sign-up opens soon, starting with a free week. Until then, try the demo."}</p>
+              <h2 className="section-title">Free, if you bring your own key</h2>
+              <p>{signupOn ? "Add your own Claude API key and fuzzyHR costs nothing, with no limits. No key? Start with a free week on us." : "Sign-up opens soon. Until then, try the demo."}</p>
             </div>
             <div className="plans">
               {plans.map((p) => (
@@ -234,9 +250,13 @@ export default function Home() {
                   <ul>
                     {p.features.map((f) => <li key={f}>{f}</li>)}
                   </ul>
-                  <Link className={p.featured ? "btn" : "btn btn-ghost"} href={signupOn ? "/sign-up" : "/app"}>
-                    {signupOn ? "Start your free week" : "Try the demo"}
-                  </Link>
+                  {p.soon ? (
+                    <span className="btn btn-ghost btn-disabled" aria-disabled="true">Coming soon</span>
+                  ) : (
+                    <Link className={p.featured ? "btn" : "btn btn-ghost"} href={signupOn ? "/sign-up" : "/app"}>
+                      {signupOn ? p.cta : "Try the demo"}
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>

@@ -475,3 +475,18 @@ a { color: inherit; }
 }
 .nav-signin { color: var(--hero-muted); font-weight: 500; font-size: 0.95rem; text-decoration: none; }
 .nav-signin:hover { color: var(--hero-ink); }
+
+/* ---------- Plan tab ---------- */
+.plan-page { display: flex; flex-direction: column; gap: 24px; max-width: 680px; padding-top: 8px; }
+.key-form { display: flex; flex-direction: column; gap: 10px; }
+.key-form input {
+  font: 400 1rem/1.4 var(--font-body); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; width: 100%;
+}
+.key-form input:focus-visible { outline: 3px solid var(--brass); outline-offset: 1px; }
+.key-steps { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+.key-steps a { color: var(--accent); }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; }
+.trial-bar .textbtn { margin-left: 2px; }
+.btn-disabled { opacity: 0.55; cursor: default; text-align: center; }
+.btn-disabled:hover { transform: none; }
