@@ -65,6 +65,9 @@ export async function chooseClaude(s: SeekerRecord): Promise<Claude> {
       "house_off",
     );
   }
+  if (s.plan === "personal" && !isPersonal(s)) {
+    throw new ApiError(402, "Your Personal plan is paused. Resume it under Plan, or add your own Claude or OpenAI key to keep writing for free.");
+  }
   if (!isPersonal(s) && trialStatus(s).ended) {
     throw new ApiError(402, "Your free week has ended. Add your own Claude or OpenAI key under Plan to keep using fuzzyHR for free.");
   }

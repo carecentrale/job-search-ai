@@ -31,8 +31,19 @@ export type SeekerRecord = Seeker & {
     periodStart: string | null;
     periodEnd: string | null;
     cancelAtPeriodEnd: boolean;
+    /** Billing paused: no charges. Personal stays on until paidThrough. */
+    paused: boolean;
+    paidThrough: string | null;
+    /** When Stripe resumes billing on its own; null means "until they resume". */
+    resumeAt: string | null;
   };
+  /** Hunting, reminders and Autopilot stopped (a break, or they got a job). */
+  huntingPaused: boolean;
+  /** Set when they told us they got a job. */
+  gotJob: GotJob | null;
 };
+
+export type GotJob = { at: string; company: string | null; title: string | null; applicationId: string | null };
 
 type Row = {
   user_id: string;
@@ -58,6 +69,11 @@ type Row = {
   period_start: Date | null;
   period_end: Date | null;
   cancel_at_period_end: boolean | null;
+  billing_paused: boolean | null;
+  paid_through: Date | null;
+  resume_at: Date | null;
+  hunting_paused: boolean | null;
+  got_job: GotJob | null;
 };
 
 const EMPTY_BRIEF: Brief = { name: "", targetTitles: [], skills: [], locations: [], remoteOk: true, avoid: [] };
@@ -88,7 +104,12 @@ function toRecord(r: Row): SeekerRecord {
       periodStart: r.period_start ? r.period_start.toISOString() : null,
       periodEnd: r.period_end ? r.period_end.toISOString() : null,
       cancelAtPeriodEnd: Boolean(r.cancel_at_period_end),
+      paused: Boolean(r.billing_paused),
+      paidThrough: r.paid_through ? r.paid_through.toISOString() : null,
+      resumeAt: r.resume_at ? r.resume_at.toISOString() : null,
     },
+    huntingPaused: Boolean(r.hunting_paused),
+    gotJob: r.got_job ?? null,
   };
 }
 
@@ -103,8 +124,11 @@ export function hasOwnKey(s: SeekerRecord): boolean {
 }
 
 /** On the Personal plan (paid, or in Stripe's grace period after a failed payment). */
-export function isPersonal(s: SeekerRecord): boolean {
-  return s.plan === "personal";
+export function isPersonal(s: SeekerRecord, now = new Date()): boolean {
+  if (s.plan !== "personal") return false;
+  if (!s.subscription.paused) return true;
+  // Billing is paused: they keep what they've paid for, then Personal pauses too.
+  return Boolean(s.subscription.paidThrough && now < new Date(s.subscription.paidThrough));
 }
 
 /** Tailored applications written in the current billing month (rewrites of one already written this month don't count again). */
@@ -120,7 +144,8 @@ export function personalUsed(s: SeekerRecord, now = new Date()): number {
 export function trialStatus(s: SeekerRecord, now = new Date(), appsPerMonth = 15) {
   const used = s.applications.filter((a) => a.tailored).length;
   if (hasOwnKey(s)) return { plan: "own-key" as const, daysLeft: 0, ended: false, used, limit: null };
-  if (isPersonal(s)) return { plan: "personal" as const, daysLeft: 0, ended: false, used: personalUsed(s, now), limit: appsPerMonth };
+  if (isPersonal(s, now)) return { plan: "personal" as const, daysLeft: 0, ended: false, used: personalUsed(s, now), limit: appsPerMonth };
+  if (s.plan === "personal") return { plan: "paused" as const, daysLeft: 0, ended: true, used, limit: 0 };
   // Allow a minute of clock drift between the database and the server, so a new trial reads 7 days, not 8.
   const daysLeft = Math.max(0, Math.ceil((new Date(s.trialEndsAt).getTime() - now.getTime() - 60_000) / 86_400_000));
   return {
@@ -165,6 +190,8 @@ type Patch = Partial<{
   lastHuntAt: Date;
   extraBoards: BoardRef[];
   agent: AgentSettings;
+  huntingPaused: boolean;
+  gotJob: GotJob | null;
   /** Encrypted key and its last 4 characters, or null to remove. */
   claudeKey: { enc: string; last4: string; provider: Provider; model: string } | null;
 }>;
@@ -181,6 +208,8 @@ export async function updateSeeker(userId: string, p: Patch): Promise<SeekerReco
   if (p.lastHuntAt) set.last_hunt_at = p.lastHuntAt;
   if (p.extraBoards) set.extra_boards = sql.json(p.extraBoards);
   if (p.agent) set.agent = sql.json(p.agent);
+  if (p.huntingPaused !== undefined) set.hunting_paused = p.huntingPaused;
+  if (p.gotJob !== undefined) set.got_job = p.gotJob ? sql.json(p.gotJob) : null;
   if (p.claudeKey !== undefined) {
     set.claude_key_enc = p.claudeKey?.enc ?? null;
     set.claude_key_last4 = p.claudeKey?.last4 ?? null;
@@ -241,6 +270,7 @@ export async function listActiveSeekers(): Promise<SeekerRecord[]> {
   const rows = await sql<Row[]>`
     select * from seekers
     where cv_text is not null and brief is not null
+      and not hunting_paused
       and (claude_key_enc is not null or plan <> 'trial' or trial_ends_at > now())`;
   return rows.map(toRecord).filter(isOnboarded);
 }

@@ -102,6 +102,8 @@ export async function overview() {
       trial_ended: number;
       applications: number;
       written: number;
+      hired: number;
+      paused: number;
     }[]
   >`
     select
@@ -114,7 +116,9 @@ export async function overview() {
       count(*) filter (where claude_key_enc is null and plan = 'trial' and trial_ends_at > now())::int as in_trial,
       count(*) filter (where claude_key_enc is null and plan = 'trial' and trial_ends_at <= now())::int as trial_ended,
       coalesce(sum(jsonb_array_length(applications)), 0)::int as applications,
-      coalesce(sum((select count(*) from jsonb_array_elements(applications) a where a ? 'tailored')), 0)::int as written
+      coalesce(sum((select count(*) from jsonb_array_elements(applications) a where a ? 'tailored')), 0)::int as written,
+      count(*) filter (where got_job is not null)::int as hired,
+      count(*) filter (where hunting_paused and got_job is null)::int as paused
     from seekers`;
   const [usage] = await sql<
     { house_calls_today: number; house_tokens_today: number; house_calls_month: number; house_in_month: number; house_out_month: number; own_calls_month: number }[]

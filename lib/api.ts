@@ -2,6 +2,7 @@ import "server-only";
 import { logActivity, logAiWanted, touchLastSeen } from "./activity";
 import { houseKeyAvailable } from "./house";
 import { fmtPrice, salesStatus } from "./billing";
+import { visitorCurrency } from "./geo";
 import { currentCaller } from "./auth";
 import { houseCallsToday, limits } from "./claude";
 import { canStoreSecrets } from "./crypto";
@@ -10,7 +11,7 @@ import { ApiError } from "./errors";
 import { nudgesFor } from "./hunt/followup";
 import { STARTER_BOARDS } from "./hunt/boards";
 import { searchSitesOn } from "./hunt/search";
-import { getOrCreateSeeker, hasOwnKey, isOnboarded, latestBriefing, trialStatus, type SeekerRecord } from "./seekers";
+import { getOrCreateSeeker, hasOwnKey, isOnboarded, isPersonal, latestBriefing, trialStatus, type SeekerRecord } from "./seekers";
 
 export { ApiError };
 
@@ -64,6 +65,7 @@ export async function stateFor(s: SeekerRecord) {
   const own = hasOwnKey(s);
   const houseOn = await houseKeyAvailable();
   const sales = await salesStatus(houseOn);
+  const currency = await visitorCurrency();
   const trial = trialStatus(s, new Date(), sales.plan.appsPerMonth);
   const house = houseOn && !trial.ended;
   return {
@@ -72,10 +74,18 @@ export async function stateFor(s: SeekerRecord) {
     onboarded: isOnboarded(s),
     applications: s.applications,
     matches: s.matches,
-    nudges: nudgesFor(s.applications),
+    nudges: s.huntingPaused ? [] : nudgesFor(s.applications),
     briefing: await latestBriefing(s.id),
     lastHuntAt: s.lastHuntAt,
     agent: s.agent,
+    /** Taking a break, or got a job: no hunting, reminders or Autopilot. */
+    pause: {
+      hunting: s.huntingPaused,
+      billing: s.subscription.paused,
+      paidThrough: s.subscription.paidThrough,
+      resumeAt: s.subscription.resumeAt,
+      gotJob: s.gotJob,
+    },
     /** Matches the AI hasn't reviewed yet; the workspace asks for a review when this is above 0. */
     unreviewed: s.matches.filter((m) => !m.review).length,
     /** Autopilot approvals still waiting for their CV and letter. */
@@ -83,21 +93,22 @@ export async function stateFor(s: SeekerRecord) {
     sources: { companies: STARTER_BOARDS.length, following: s.extraBoards, ...searchSitesOn() },
     trial,
     billing: {
-      personal: s.plan === "personal",
+      personal: isPersonal(s),
       status: s.subscription.status,
       periodEnd: s.subscription.periodEnd,
       cancelAtPeriodEnd: s.subscription.cancelAtPeriodEnd,
-      canManage: Boolean(s.subscription.customerId),
+      /** They've had a subscription (not just opened checkout), so there are invoices or a plan to manage. */
+      canManage: Boolean(s.subscription.customerId && s.subscription.status),
       /** The Personal plan, when it's on sale. */
-      offer: sales.ready
-        ? {
-            cad: fmtPrice(sales.plan.priceCad, "cad"),
-            usd: fmtPrice(sales.plan.priceUsd, "usd"),
-            appsPerMonth: sales.plan.appsPerMonth,
-            dailyRequests: sales.plan.dailyRequests,
-            testMode: sales.mode === "test",
-          }
-        : null,
+      offer: {
+        /** Can they buy it right now? Needs it on sale, and a visitor in Canada or the US. */
+        onSale: sales.ready && currency !== null,
+        available: currency !== null,
+        price: fmtPrice(currency === "usd" ? sales.plan.priceUsd : sales.plan.priceCad, currency ?? "cad"),
+        appsPerMonth: sales.plan.appsPerMonth,
+        dailyRequests: sales.plan.dailyRequests,
+        testMode: sales.mode === "test",
+      },
     },
     /** True when fuzzyHR's own AI key isn't set yet, so the workspace shows "coming soon" instead of the free week. */
     houseOff: !houseOn,
@@ -113,7 +124,7 @@ export async function stateFor(s: SeekerRecord) {
       canSaveKey: canStoreSecrets(),
       houseKeyAvailable: houseOn,
       usedToday: own ? null : await houseCallsToday(s.id),
-      dailyLimit: own ? null : s.plan === "personal" ? sales.plan.dailyRequests : limits().perUser,
+      dailyLimit: own ? null : isPersonal(s) ? sales.plan.dailyRequests : limits().perUser,
     },
   };
 }

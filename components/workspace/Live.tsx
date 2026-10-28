@@ -219,8 +219,22 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
       setBusy(null);
     }
   };
-  const subscribe = (currency: "cad" | "usd") => goTo("/api/me/billing/checkout", { currency });
+  const subscribe = () => goTo("/api/me/billing/checkout");
   const manageBilling = () => goTo("/api/me/billing/portal");
+  const pause = (months: number | null) =>
+    act("pause", () => call("/api/me/pause", json("POST", { months })), () => "Paused. Enjoy the break. Your tracker and documents are all still here.");
+  const resume = () =>
+    act("pause", () => call("/api/me/resume", { method: "POST" }), (r) => {
+      setTab("today");
+      return (r as Reply & { resumed?: { chargedNow: boolean } }).resumed?.chargedNow
+        ? "Welcome back. A new month of Personal started today. I'll hunt again from tomorrow morning, or press Hunt now."
+        : "Welcome back. I'll hunt again from tomorrow morning, or press Hunt now.";
+    });
+  const gotJob = (applicationId: string | null, company: string) =>
+    act("pause", () => call("/api/me/got-job", json("POST", { applicationId, company })), () => {
+      setTab("today");
+      return "Congratulations! I've stopped hunting, and any billing is paused.";
+    });
   const deleteAccount = async () => {
     setBusy("delete");
     try {
@@ -252,7 +266,12 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
       />
 
       <div className="wrap trial-bar">
-        {state.claude.mode === "own" ? (
+        {state.pause.hunting ? (
+          <span className="muted">
+            {state.pause.gotJob ? "Congratulations on the new job. Hunting and reminders are off." : "You're on a break. Hunting and reminders are off."}{" "}
+            <button className="textbtn small" disabled={busy === "pause"} onClick={resume}>Resume</button>
+          </span>
+        ) : state.claude.mode === "own" ? (
           <span className="muted">Free with your own {state.claude.provider === "openai" ? "OpenAI" : "Claude"} key. No limits.</span>
         ) : state.billing.personal ? (
           <span className="muted">
@@ -298,8 +317,11 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
         {tab === "plan" ? (
           <>
             {(state.billing.personal || state.billing.canManage) && <PersonalPanel state={state} busy={busy === "billing"} onManage={manageBilling} />}
-            {!state.billing.personal && state.billing.offer && state.claude.mode !== "own" && (
+            {!state.billing.personal && state.claude.mode !== "own" && (
               <PersonalOffer offer={state.billing.offer} busy={busy === "billing"} onSubscribe={subscribe} />
+            )}
+            {state.onboarded && (
+              <BreakPanel state={state} busy={busy === "pause"} onPause={pause} onResume={resume} onGotJob={gotJob} />
             )}
             <PlanPanel state={state} busy={busy === "key" || busy === "notify"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} onNotify={() => notifyMe("notify me")} />
             <DataPanel busy={busy === "delete"} onDelete={deleteAccount} />
@@ -316,9 +338,11 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
                     <h1>{greeting()}, {state.brief.name || "there"}.</h1>
                     <p className="muted">{todayLine(state)}</p>
                   </div>
-                  <button className="btn btn-small btn-ghost hunt-btn" disabled={busy === "hunt"} onClick={huntNow}>
-                    {busy === "hunt" ? "Hunting…" : "Hunt now"}
-                  </button>
+                  {!state.pause.hunting && (
+                    <button className="btn btn-small btn-ghost hunt-btn" disabled={busy === "hunt"} onClick={huntNow}>
+                      {busy === "hunt" ? "Hunting…" : "Hunt now"}
+                    </button>
+                  )}
                 </div>
 
                 {state.nudges.length > 0 && (
@@ -949,47 +973,40 @@ function DataPanel({ busy, onDelete }: { busy: boolean; onDelete: () => void }) 
   );
 }
 
-/** Canadians see CAD first; everyone else USD. They can pick either. */
-function defaultCurrency(): "cad" | "usd" {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
-    const canada = /^America\/(Toronto|Montreal|Vancouver|Edmonton|Winnipeg|Halifax|Regina|St_Johns|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson_Creek|Iqaluit|Yellowknife|Swift_Current|Thunder_Bay|Nipigon|Rainy_River|Atikokan|Cambridge_Bay|Rankin_Inlet|Resolute|Inuvik|Creston|Fort_Nelson|Dawson)$/;
-    if (canada.test(tz) || /-CA$/i.test(navigator.language)) return "cad";
-  } catch {
-    /* fall through */
-  }
-  return "usd";
-}
+type Offer = WorkspaceState["billing"]["offer"];
 
-type Offer = NonNullable<WorkspaceState["billing"]["offer"]>;
-
-function PersonalOffer({ offer, busy, onSubscribe }: { offer: Offer; busy: boolean; onSubscribe: (c: "cad" | "usd") => void }) {
-  const [currency, setCurrency] = useState<"cad" | "usd">(defaultCurrency);
+/** The Personal plan, priced in the visitor's currency (CAD in Canada, USD in the US). */
+function PersonalOffer({ offer, busy, onSubscribe }: { offer: Offer; busy: boolean; onSubscribe: () => void }) {
   return (
     <section className="panel personal-offer">
       <div className="panel-head">
         <h2>Personal</h2>
-        <p className="price-line"><strong>{currency === "cad" ? offer.cad : offer.usd}</strong> a month, tax included</p>
+        <p className="price-line"><strong>{offer.price}</strong> a month, tax included</p>
       </div>
       <p>No API key needed. I use fuzzyHR&apos;s AI for you.</p>
       <ul className="small offer-list">
         <li>{offer.appsPerMonth} tailored CVs and cover letters a month, with free rewrites</li>
         <li>AI review of every hunt, and Autopilot</li>
         <li>Up to {offer.dailyRequests} AI requests a day</li>
-        <li>Cancel any time from this page</li>
+        <li>Pause or cancel any time from this page</li>
       </ul>
-      <div className="offer-actions">
-        <button className="btn" disabled={busy} onClick={() => onSubscribe(currency)}>{busy ? "Opening checkout…" : "Subscribe"}</button>
-        <span className="small muted">
-          Pay in{" "}
-          <button className={`textbtn small${currency === "cad" ? " on" : ""}`} aria-pressed={currency === "cad"} onClick={() => setCurrency("cad")}>CAD</button>{" / "}
-          <button className={`textbtn small${currency === "usd" ? " on" : ""}`} aria-pressed={currency === "usd"} onClick={() => setCurrency("usd")}>USD</button>
-        </span>
-      </div>
-      <p className="muted small">
-        Secure payment by Stripe. fuzzyHR never sees your card number. Renews monthly until you cancel. See the <Link href="/terms">Terms</Link>.
-        {offer.testMode ? " Test mode: use card 4242 4242 4242 4242; no real charge." : ""}
-      </p>
+      {offer.onSale ? (
+        <>
+          <div className="offer-actions">
+            <button className="btn" disabled={busy} onClick={onSubscribe}>{busy ? "Opening checkout…" : "Subscribe"}</button>
+          </div>
+          <p className="muted small">
+            Secure payment by Stripe. fuzzyHR never sees your card number. Renews monthly until you pause or cancel. See the <Link href="/terms">Terms</Link>.
+            {offer.testMode ? " Test mode: use card 4242 4242 4242 4242; no real charge." : ""}
+          </p>
+        </>
+      ) : (
+        <p className="muted small">
+          {offer.available
+            ? "Coming soon. Until then, add your own Claude or OpenAI key below and fuzzyHR is free."
+            : "Personal is available in Canada and the US for now. fuzzyHR is free everywhere with your own Claude or OpenAI key."}
+        </p>
+      )}
     </section>
   );
 }
@@ -1016,6 +1033,102 @@ function PersonalPanel({ state, busy, onManage }: { state: WorkspaceState; busy:
       {b.canManage && (
         <div><button className="btn btn-small btn-ghost" disabled={busy} onClick={onManage}>{busy ? "Opening…" : "Manage billing, invoices or cancel"}</button></div>
       )}
+    </section>
+  );
+}
+
+/** Take a break, say you got a job, or come back. */
+function BreakPanel({
+  state,
+  busy,
+  onPause,
+  onResume,
+  onGotJob,
+}: {
+  state: WorkspaceState;
+  busy: boolean;
+  onPause: (months: number | null) => void;
+  onResume: () => void;
+  onGotJob: (applicationId: string | null, company: string) => void;
+}) {
+  const [months, setMonths] = useState<string>("1");
+  const [jobOpen, setJobOpen] = useState(false);
+  const [appId, setAppId] = useState<string>("");
+  const [company, setCompany] = useState("");
+  const p = state.pause;
+  const paying = state.billing.personal || p.billing;
+  const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }) : null);
+
+  if (p.hunting) {
+    return (
+      <section className="panel break-panel">
+        <h2>{p.gotJob ? "Congratulations on the new job" : "You're on a break"}</h2>
+        <p>
+          {p.gotJob?.company ? <>At <strong>{p.gotJob.company}</strong>{p.gotJob.title ? `, as ${p.gotJob.title}` : ""}. </> : null}
+          Hunting, reminders and Autopilot are off. Your tracker, CV and documents are all still here.
+        </p>
+        {p.billing && (
+          <p className="small">
+            Billing is paused: no more charges.
+            {p.paidThrough && new Date(p.paidThrough) > new Date() ? ` You keep Personal until ${date(p.paidThrough)}, the end of the month you paid for.` : ""}
+            {p.resumeAt ? ` Billing starts again by itself on ${date(p.resumeAt)}, unless you cancel.` : " It stays paused until you resume."}
+          </p>
+        )}
+        <div className="offer-actions">
+          <button className="btn btn-small" disabled={busy} onClick={onResume}>{busy ? "Resuming…" : "Resume hunting"}</button>
+          {p.billing && state.billing.canManage && <span className="muted small">Done for good? Cancel under Manage billing above.</span>}
+        </div>
+        {p.billing && p.paidThrough && new Date(p.paidThrough) <= new Date() && (
+          <p className="muted small">Resuming starts a new month of Personal today and charges your card.</p>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="panel break-panel">
+      <h2>Taking a break, or got the job?</h2>
+      <p className="muted small">
+        Pausing stops hunting, reminders and Autopilot.{paying ? " It also pauses billing right away: no more charges, and you keep Personal until the end of the month you've paid for." : ""} Everything you&apos;ve made stays here.
+      </p>
+      <div className="inline-form">
+        <label htmlFor="pause-for" className="sr-only">Pause for</label>
+        <select id="pause-for" value={months} onChange={(e) => setMonths(e.target.value)} className="pause-select">
+          <option value="1">Pause for 1 month</option>
+          <option value="2">Pause for 2 months</option>
+          <option value="3">Pause for 3 months</option>
+          <option value="">Pause until I resume</option>
+        </select>
+        <button className="btn btn-small btn-ghost" disabled={busy} onClick={() => onPause(months ? Number(months) : null)}>{busy ? "Pausing…" : "Pause"}</button>
+      </div>
+      {paying && months && <p className="muted small">Billing starts again by itself after {months} month{months === "1" ? "" : "s"}. You can resume sooner, or cancel.</p>}
+
+      <div className="got-job">
+        {!jobOpen ? (
+          <button className="btn btn-small" onClick={() => setJobOpen(true)}>I got a job!</button>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onGotJob(appId || null, company);
+            }}
+          >
+            <p><strong>Congratulations!</strong> I&apos;ll stop hunting right away{paying ? " and pause your billing, so you're not charged again" : ""}.</p>
+            <label htmlFor="job-from" className="small">Where?</label>
+            <div className="inline-form">
+              <select id="job-from" value={appId} onChange={(e) => setAppId(e.target.value)} className="pause-select">
+                <option value="">Somewhere not in my tracker</option>
+                {state.applications.map((a) => <option key={a.id} value={a.id}>{a.job.company}: {a.job.title}</option>)}
+              </select>
+              {!appId && <input aria-label="Company (optional)" placeholder="Company (optional)" value={company} onChange={(e) => setCompany(e.target.value)} maxLength={120} />}
+            </div>
+            <div className="offer-actions" style={{ marginTop: 10 }}>
+              <button className="btn btn-small" type="submit" disabled={busy}>{busy ? "Saving…" : "Stop hunting"}</button>
+              <button className="textbtn small" type="button" onClick={() => setJobOpen(false)}>Cancel</button>
+            </div>
+          </form>
+        )}
+      </div>
     </section>
   );
 }

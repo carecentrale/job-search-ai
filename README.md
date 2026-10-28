@@ -60,6 +60,8 @@ fuzzyHR's own AI key can be left out while testing; the owner adds it later in A
 
 Admin → Payments: paste a Stripe secret key and fuzzyHR creates the product, monthly CAD and USD prices (tax included), a webhook endpoint and a customer portal in that Stripe account. Prices and allowances (tailored applications a month, AI requests a day) are set there too, along with an on-sale switch. Personal subscribers use fuzzyHR's AI key within those allowances. Stripe's webhooks (`/api/stripe/webhook`, signature-checked) keep each user's plan in sync. Deleting an account cancels its subscription.
 
+Personal is sold in Canada (CAD) and the US (USD) only, chosen from Vercel's `x-vercel-ip-country` header; elsewhere the price is shown but checkout is refused. Users can pause (1 to 3 months, or until they resume) or say they got a job: hunting, reminders and Autopilot stop, and Stripe billing is paused (`pause_collection`) while they keep Personal until the end of the paid month. Resuming after that month starts a new one immediately.
+
 ## How the hunt works
 
 1. **Find.** Every morning at 7 (Toronto), fuzzyHR reads the public job boards of 115 companies (Greenhouse, Lever, Ashby, Recruitee; list in `lib/hunt/boards.ts`), the companies each user follows, and, when keys are set, Adzuna and Jooble searches built from each user's roles and cities. Duplicates are merged.

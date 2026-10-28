@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { SiteFooter } from "@/components/LegalPage";
 const work = [
   {
@@ -55,41 +56,43 @@ const basePlans = [
   },
 ];
 
-/** The Personal card, priced from Admin → Payments; "coming soon" until it's on sale. */
+/**
+ * The Personal card, priced from Admin → Payments. The price always shows, for
+ * transparency; the button says "Coming soon" until Personal is on sale.
+ */
 async function personalPlan() {
-  const base = { name: "Personal", featured: false, cta: "Get Personal" };
+  const { DEFAULT_PLAN, fmtPrice, planSettings, salesStatus } = await import("@/lib/billing");
+  const { visitorCurrency } = await import("@/lib/geo");
+  const currency = await visitorCurrency();
+  let plan = DEFAULT_PLAN;
+  let ready = false;
   try {
-    const { salesStatus, fmtPrice } = await import("@/lib/billing");
     const { houseKeyAvailable } = await import("@/lib/house");
     const sales = await salesStatus(await houseKeyAvailable());
-    if (sales.ready) {
-      return {
-        ...base,
-        price: fmtPrice(sales.plan.priceCad, "cad"),
-        period: `a month, or ${fmtPrice(sales.plan.priceUsd, "usd")}`,
-        features: [
-          "No API key needed: AI on us",
-          `${sales.plan.appsPerMonth} tailored CVs and cover letters a month`,
-          "AI review of every hunt, and Autopilot",
-          "Tax included. Cancel any time",
-        ],
-        soon: false,
-      };
-    }
+    plan = sales.plan ?? (await planSettings());
+    ready = sales.ready;
   } catch {
-    /* no database at build time: show it as coming soon */
+    /* no database at build time: show the default prices */
   }
   return {
-    ...base,
-    price: "Soon",
-    period: "",
-    features: ["No API key needed: AI on us", "Tailored CVs and cover letters every month", "AI review of every hunt, and Autopilot"],
-    soon: true,
+    name: "Personal",
+    featured: false,
+    cta: "Get Personal",
+    // One price, in the visitor's own currency. Outside Canada and the US, both are shown for reference.
+    price: currency ? fmtPrice(currency === "cad" ? plan.priceCad : plan.priceUsd, currency) : fmtPrice(plan.priceCad, "cad"),
+    period: currency ? "a month" : `a month in Canada, ${fmtPrice(plan.priceUsd, "usd")} in the US`,
+    features: [
+      "No API key needed: AI on us",
+      `${plan.appsPerMonth} tailored CVs and cover letters a month`,
+      "AI review of every hunt, and Autopilot",
+      "Tax included. Pause or cancel any time",
+      ...(currency ? [] : ["Available in Canada and the US for now"]),
+    ],
+    soon: !ready || !currency,
+    soonLabel: !currency ? "Canada and US only, for now" : "Coming soon",
   };
 }
 
-/** Prices can change in Admin; refresh the page at most every 5 minutes. */
-export const revalidate = 300;
 
 const faqs = [
   {
@@ -122,6 +125,7 @@ const faqs = [
 const signupOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.DATABASE_URL);
 
 export default async function Home() {
+  await connection(); // the Personal price depends on the visitor's country
   const plans = [...basePlans, await personalPlan()];
   return (
     <>
@@ -280,7 +284,7 @@ export default async function Home() {
                     {p.features.map((f) => <li key={f}>{f}</li>)}
                   </ul>
                   {p.soon ? (
-                    <span className="btn btn-ghost btn-disabled" aria-disabled="true">Coming soon</span>
+                    <span className="btn btn-ghost btn-disabled" aria-disabled="true">{"soonLabel" in p ? String(p.soonLabel) : "Coming soon"}</span>
                   ) : (
                     <Link className={p.featured ? "btn" : "btn btn-ghost"} href={signupOn ? "/sign-up" : "/app"}>
                       {signupOn ? p.cta : "Try the demo"}

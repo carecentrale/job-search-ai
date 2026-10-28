@@ -645,3 +645,7 @@ a { color: inherit; }
 .offer-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 10px; }
 .textbtn.on { text-decoration-thickness: 3px; color: var(--ink); }
 .plan-form .plan-fields { width: 100%; }
+
+.break-panel { margin-top: 16px; }
+.pause-select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.got-job { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; }

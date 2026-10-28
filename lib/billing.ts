@@ -360,6 +360,8 @@ export async function syncSubscription(sub: Stripe.Subscription, hint?: string):
   const [before] = await sql<{ plan: string; subscription_status: string | null }[]>`select plan, subscription_status from seekers where user_id = ${userId}`;
   if (!before) return;
   const paid = PAID_STATUSES.has(sub.status);
+  const paused = Boolean(sub.pause_collection);
+  const resumeAt = sub.pause_collection?.resumes_at ? new Date(sub.pause_collection.resumes_at * 1000) : null;
   const periodStart = item?.current_period_start ? new Date(item.current_period_start * 1000) : null;
   const periodEnd = item?.current_period_end ? new Date(item.current_period_end * 1000) : null;
   await sql`
@@ -372,6 +374,10 @@ export async function syncSubscription(sub: Stripe.Subscription, hint?: string):
       period_start = ${periodStart},
       period_end = ${periodEnd},
       cancel_at_period_end = ${Boolean(sub.cancel_at_period_end)},
+      billing_paused = ${paused},
+      -- Keep the "paid through" date set when they paused; Stripe keeps cycling periods while paused.
+      paid_through = ${paused ? sql`coalesce(paid_through, ${periodEnd})` : null},
+      resume_at = ${paused ? resumeAt : null},
       updated_at = now()
     where user_id = ${userId}`;
   if (before.plan !== "personal" && paid) {
@@ -403,4 +409,51 @@ export async function cancelSubscriptionFor(userId: string): Promise<void> {
   const c = await stripeClient();
   if (!c) throw new Error("Stripe isn't connected, so the subscription can't be cancelled from here.");
   await c.stripe.subscriptions.cancel(row.stripe_subscription_id);
+}
+
+/**
+ * Pause billing: no more charges. They keep Personal until the end of the month
+ * they've paid for. `months` sets when billing resumes by itself (counted from
+ * that date); null means until they resume.
+ */
+export async function pauseBilling(userId: string, months: number | null): Promise<{ paidThrough: Date | null; resumeAt: Date | null }> {
+  const sql = await db();
+  const [row] = await sql<{ stripe_subscription_id: string | null; subscription_status: string | null }[]>`
+    select stripe_subscription_id, subscription_status from seekers where user_id = ${userId}`;
+  if (!row?.stripe_subscription_id || !PAID_STATUSES.has(row.subscription_status ?? "")) return { paidThrough: null, resumeAt: null };
+  const c = await stripeClient();
+  if (!c) throw new Error("Stripe isn't connected.");
+  const sub = await c.stripe.subscriptions.retrieve(row.stripe_subscription_id);
+  const end = sub.items?.data?.[0]?.current_period_end;
+  const paidThrough = end ? new Date(end * 1000) : new Date();
+  const resumeAt = months ? new Date(paidThrough.getTime() + months * 30 * 86_400_000) : null;
+  const updated = await c.stripe.subscriptions.update(sub.id, {
+    pause_collection: { behavior: "void", ...(resumeAt ? { resumes_at: Math.floor(resumeAt.getTime() / 1000) } : {}) },
+  });
+  await sql`update seekers set billing_paused = true, paid_through = ${paidThrough}, resume_at = ${resumeAt} where user_id = ${userId}`;
+  await syncSubscription(updated, userId);
+  return { paidThrough, resumeAt };
+}
+
+/**
+ * Resume billing. Inside the month they already paid for, billing simply carries
+ * on at the next renewal. After it, a new month starts today and is charged now.
+ */
+export async function resumeBilling(userId: string): Promise<{ chargedNow: boolean }> {
+  const sql = await db();
+  const [row] = await sql<{ stripe_subscription_id: string | null; billing_paused: boolean; paid_through: Date | null }[]>`
+    select stripe_subscription_id, billing_paused, paid_through from seekers where user_id = ${userId}`;
+  if (!row?.stripe_subscription_id || !row.billing_paused) return { chargedNow: false };
+  const c = await stripeClient();
+  if (!c) throw new Error("Stripe isn't connected.");
+  const stillPaid = row.paid_through && Date.now() < row.paid_through.getTime();
+  const params: Stripe.SubscriptionUpdateParams = { pause_collection: "" };
+  if (!stillPaid) {
+    params.billing_cycle_anchor = "now" as never; // the SDK types this field loosely; "now" is a documented value
+    params.proration_behavior = "none";
+  }
+  const updated = await c.stripe.subscriptions.update(row.stripe_subscription_id, params);
+  await sql`update seekers set billing_paused = false, paid_through = null, resume_at = null where user_id = ${userId}`;
+  await syncSubscription(updated, userId);
+  return { chargedNow: !stillPaid };
 }

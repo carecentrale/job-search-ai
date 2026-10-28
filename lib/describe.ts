@@ -42,6 +42,9 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   plan_ended: "Subscription ended",
   payment_failed: "Payment failed",
   billing_settings: "Payment settings",
+  paused: "Paused",
+  resumed: "Resumed",
+  got_job: "Got a job",
 };
 
 export function describe(type: string, d: D): string {
@@ -127,6 +130,12 @@ function describeEvent(type: string, d: D): string {
       if (d.action === "plan_saved") return `Saved the Personal plan: CA$${(Number(d.priceCad) / 100).toFixed(2)} / US$${(Number(d.priceUsd) / 100).toFixed(2)} a month, ${s(d.appsPerMonth)} applications, ${d.selling ? "on sale" : "not on sale"}.`;
       return what[s(d.action)] ?? JSON.stringify(d);
     }
+    case "paused":
+      return `Took a break${d.months ? ` for ${s(d.months)} month${d.months === 1 ? "" : "s"}` : " until they resume"}.${d.billing ? ` Billing paused; Personal stays on until ${s(d.paidThrough).slice(0, 10)}.` : ""}`;
+    case "resumed":
+      return `Resumed hunting${d.chargedNow ? ", and a new paid month started" : ""}.`;
+    case "got_job":
+      return `Got a job${d.company ? ` at ${s(d.company)}` : ""}${d.title ? ` as ${s(d.title)}` : ""}${d.fromTracker ? " (from their tracker)" : ""}. Hunting stopped${d.wasPaying ? " and billing paused" : ""}.`;
     case "data_exported":
       return "Downloaded a copy of their data.";
     case "account_deleted":

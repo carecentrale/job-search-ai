@@ -12,6 +12,7 @@ const COOLDOWN_MINUTES = 10;
 export async function POST() {
   return withSeeker(async (s) => {
     if (!isOnboarded(s)) throw new ApiError(409, "Add your CV and at least one role you want first.");
+    if (s.huntingPaused) throw new ApiError(409, "Your hunt is paused. Resume it under Plan to start hunting again.");
     if (s.lastHuntAt) {
       const mins = Math.floor((Date.now() - new Date(s.lastHuntAt).getTime()) / 60_000);
       if (mins < COOLDOWN_MINUTES) {

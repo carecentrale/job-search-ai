@@ -33,6 +33,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <div className="stat"><span>{fmt(u.own_anthropic + u.own_openai)}</span>own key<small>{fmt(u.own_anthropic)} Claude, {fmt(u.own_openai)} OpenAI</small></div>
         <div className="stat"><span>{fmt(u.in_trial)}</span>free week<small>{fmt(u.trial_ended)} ended without a key</small></div>
         <div className="stat"><span>{fmt(u.written)}</span>written<small>of {fmt(u.applications)} applications started</small></div>
+        <div className="stat"><span>{fmt(u.hired)}</span>got a job<small>{fmt(u.paused)} on a break</small></div>
       </section>
 
       <section className="panel">

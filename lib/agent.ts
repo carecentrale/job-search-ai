@@ -71,7 +71,7 @@ function autopilotToday(s: SeekerRecord): number {
  * spread across requests.
  */
 export async function autopilotApprove(s: SeekerRecord): Promise<{ seeker: SeekerRecord; approved: Application[] }> {
-  if (!s.agent.autopilot) return { seeker: s, approved: [] };
+  if (!s.agent.autopilot || s.huntingPaused) return { seeker: s, approved: [] };
   const room = Math.max(0, s.agent.perDay - autopilotToday(s));
   const picks = s.matches
     .filter((m) => m.review?.verdict === "recommend" && m.review.fit >= s.agent.minFit)

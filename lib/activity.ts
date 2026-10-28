@@ -42,7 +42,10 @@ export type ActivityType =
   | "plan_changed"
   | "plan_ended"
   | "payment_failed"
-  | "billing_settings";
+  | "billing_settings"
+  | "paused"
+  | "resumed"
+  | "got_job";
 
 export async function logActivity(userId: string, type: ActivityType, detail: Record<string, unknown> = {}): Promise<void> {
   try {
