@@ -52,6 +52,8 @@ export const FR: Record<string, string> = {
   "Pricing": "Tarifs",
   "Sign in": "Se connecter",
   "Start free": "Commencer gratuitement",
+  "Free trial": "Essai gratuit",
+  "Demo": "Démo",
   "Try the demo": "Essayer la démo",
   "Try the demo first": "Essayer d'abord la démo",
   "See pricing": "Voir les tarifs",
@@ -151,6 +153,11 @@ export const FR: Record<string, string> = {
   "Can I deduct fuzzyHR from my taxes?": "Puis-je déduire fuzzyHR de mes impôts?",
   "Usually not, if you're an employee looking for a job. In Canada, including Quebec, job-search costs aren't deductible for employees. In the US, federal law no longer allows employees to deduct them, though a few states, such as California, may still allow it if you itemize. If you're self-employed or a contractor and use fuzzyHR to find clients or contracts, it may count as a business expense. Your receipts are always available under Plan → Manage billing. This isn't tax advice, so check with an accountant or your tax authority.":
     "Généralement non, si vous êtes un salarié à la recherche d'un emploi. Au Canada, y compris au Québec, les frais de recherche d'emploi ne sont pas déductibles pour les salariés. Aux États-Unis, la loi fédérale ne permet plus aux salariés de les déduire, mais quelques États, comme la Californie, pourraient encore le permettre si vous détaillez vos déductions. Si vous êtes travailleur autonome ou contractuel et utilisez fuzzyHR pour trouver des clients ou des contrats, il pourrait s'agir d'une dépense d'entreprise. Vos reçus sont toujours accessibles sous Forfait → Gérer la facturation. Ceci n'est pas un conseil fiscal : consultez un comptable ou votre autorité fiscale.",
+  "Sources:": "Sources :",
+  "Canada Revenue Agency: line 22900, employment expenses": "Agence du revenu du Canada : ligne 22900, dépenses d'emploi",
+  "Revenu Québec: line 207, employment expenses": "Revenu Québec : ligne 207, dépenses d'emploi",
+  "IRS Publication 529: miscellaneous deductions": "IRS, publication 529 : déductions diverses (en anglais)",
+  "California FTB: Schedule CA instructions (itemized deductions)": "Franchise Tax Board de la Californie : instructions de l'annexe CA (en anglais)",
   "Who can see my CV?": "Qui peut voir mon CV?",
   "Only you. Your documents are private to your account and you can delete them at any time.":
     "Vous seul. Vos documents sont privés et vous pouvez les supprimer en tout temps.",

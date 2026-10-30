@@ -661,3 +661,37 @@ a { color: inherit; }
   .today-head > div { flex: 1 1 0; min-width: 0; }
   .today-head .hunt-btn { flex-basis: 100%; margin-left: 0; }
 }
+
+/* ---------- Phones: header, workspace tabs, legal tables ---------- */
+.lbl-short { display: none; }
+.nav-signin, .nav .btn { white-space: nowrap; }
+@media (max-width: 600px) {
+  .nav-inner { gap: 10px; }
+  .nav .wordmark { font-size: 1.25rem; }
+  .nav-lang { margin-left: auto; margin-right: 0; }
+  .nav-signin { font-size: 0.88rem; }
+  .nav .nav-cta { padding-inline: 14px; }
+  .nav-cta .lbl-long { display: none; }
+  .nav-cta .lbl-short { display: inline; }
+  .lang-switch button { padding: 5px 7px; }
+}
+@media (max-width: 640px) {
+  /* All workspace tabs visible: wrap onto a second line instead of scrolling sideways. */
+  .ws-top-inner { flex-wrap: wrap; row-gap: 8px; }
+  .ws-tabs { order: 3; flex: 1 1 100%; flex-wrap: wrap; overflow-x: visible; gap: 4px; }
+  .ws-tabs button, .ws-tabs a { padding: 7px 11px; font-size: 0.9rem; }
+  .ws-lang { margin-left: auto; }
+  /* Legal tables become one card per row, each cell labelled. */
+  .legal-table, .legal-table tbody, .legal-table tr, .legal-table td { display: block; width: 100%; }
+  .legal-table thead { display: none; }
+  .legal-table tr { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+  .legal-table td { border: 0; padding: 3px 0; }
+  .legal-table td:first-child { font-weight: 600; }
+  .legal-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .legal-table td:first-child[data-label]::before { content: none; }
+}
+.faq-sources { color: var(--muted); margin-top: 8px; } .faq-sources a { color: var(--accent); }
+/* Phones: the hero's own button is right below, so the header keeps just the language switch and Sign in. */
+@media (max-width: 480px) {
+  .nav .nav-signin + .nav-cta { display: none; }
+}

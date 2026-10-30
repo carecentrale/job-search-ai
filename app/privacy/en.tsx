@@ -34,18 +34,18 @@ export function PrivacyEn() {
       <table className="legal-table">
         <thead><tr><th>What</th><th>Where it comes from</th><th>Why</th></tr></thead>
         <tbody>
-          <tr><td>Your name, email address and sign-in details</td><td>You, when you sign up, through our sign-in provider Clerk (including Google sign-in, if you use it)</td><td>To create and secure your account</td></tr>
-          <tr><td>Your CV, in full</td><td>You, when you upload or paste it</td><td>To suggest your brief, match jobs to you, and write tailored CVs and cover letters</td></tr>
-          <tr><td>Your brief: roles you want, strengths, cities, remote preference, things to avoid</td><td>You, or suggested by the AI from your CV for you to edit</td><td>To decide which jobs to show you</td></tr>
-          <tr><td>Your shortlist, passed jobs, tracker, notes, interview dates, followed companies and job links you add</td><td>You, and our daily hunt</td><td>To run your job search and remind you to follow up</td></tr>
-          <tr><td>CVs, cover letters, AI reviews and fit scores we generate</td><td>Our AI providers, working from your information</td><td>So you can review, edit and use them</td></tr>
-          <tr><td>Billing details, if you subscribe: your plan, currency, subscription status, renewal date, and any pause. If you tell us you got a job, the company and role you choose</td><td>You, through Stripe&apos;s checkout. Your card details go straight to Stripe; we never see or store your card number</td><td>To provide and bill the Personal plan</td></tr>
-          <tr><td>Your own AI key, if you add one</td><td>You</td><td>To run the AI on your account. It is encrypted (AES-256-GCM) and never shown again; we display only its last 4 characters</td></tr>
-          <tr><td>An activity log: what you did in the app and when (for example &ldquo;uploaded a CV&rdquo;, &ldquo;approved a job&rdquo;), which workspace screens and documents you opened, plus counts of AI requests and tokens</td><td>Recorded automatically as you use the app</td><td>To enforce free-week limits, support you, prevent abuse, and understand how the product is used</td></tr>
-          <tr><td>Technical data: IP address, browser and device type, and request logs</td><td>Recorded automatically by our hosting and sign-in providers</td><td>Security, fraud prevention and keeping the service running</td></tr>
-          <tr><td>Your country and province or state, from your IP address</td><td>Our hosting provider, on each visit</td><td>To show the site in French in Quebec, show the Personal plan&apos;s price in your currency and check it&apos;s available where you are. We don&apos;t store them, except the country recorded when you start a checkout</td></tr>
-          <tr><td>Your language choice</td><td>You, with the EN/FR switch, kept in a cookie on your device and saved with your account</td><td>To show the site in your language and have the AI write its reviews in it</td></tr>
-          <tr><td>Anonymous visit statistics: pages visited, the site that referred you, country, browser and device type</td><td>Vercel Web Analytics, on every page except the admin area</td><td>To see how many people visit and which pages are useful. These statistics aren&apos;t linked to your account</td></tr>
+          <tr><td data-label="What">Your name, email address and sign-in details</td><td data-label="Where it comes from">You, when you sign up, through our sign-in provider Clerk (including Google sign-in, if you use it)</td><td data-label="Why">To create and secure your account</td></tr>
+          <tr><td data-label="What">Your CV, in full</td><td data-label="Where it comes from">You, when you upload or paste it</td><td data-label="Why">To suggest your brief, match jobs to you, and write tailored CVs and cover letters</td></tr>
+          <tr><td data-label="What">Your brief: roles you want, strengths, cities, remote preference, things to avoid</td><td data-label="Where it comes from">You, or suggested by the AI from your CV for you to edit</td><td data-label="Why">To decide which jobs to show you</td></tr>
+          <tr><td data-label="What">Your shortlist, passed jobs, tracker, notes, interview dates, followed companies and job links you add</td><td data-label="Where it comes from">You, and our daily hunt</td><td data-label="Why">To run your job search and remind you to follow up</td></tr>
+          <tr><td data-label="What">CVs, cover letters, AI reviews and fit scores we generate</td><td data-label="Where it comes from">Our AI providers, working from your information</td><td data-label="Why">So you can review, edit and use them</td></tr>
+          <tr><td data-label="What">Billing details, if you subscribe: your plan, currency, subscription status, renewal date, and any pause. If you tell us you got a job, the company and role you choose</td><td data-label="Where it comes from">You, through Stripe&apos;s checkout. Your card details go straight to Stripe; we never see or store your card number</td><td data-label="Why">To provide and bill the Personal plan</td></tr>
+          <tr><td data-label="What">Your own AI key, if you add one</td><td data-label="Where it comes from">You</td><td data-label="Why">To run the AI on your account. It is encrypted (AES-256-GCM) and never shown again; we display only its last 4 characters</td></tr>
+          <tr><td data-label="What">An activity log: what you did in the app and when (for example &ldquo;uploaded a CV&rdquo;, &ldquo;approved a job&rdquo;), which workspace screens and documents you opened, plus counts of AI requests and tokens</td><td data-label="Where it comes from">Recorded automatically as you use the app</td><td data-label="Why">To enforce free-week limits, support you, prevent abuse, and understand how the product is used</td></tr>
+          <tr><td data-label="What">Technical data: IP address, browser and device type, and request logs</td><td data-label="Where it comes from">Recorded automatically by our hosting and sign-in providers</td><td data-label="Why">Security, fraud prevention and keeping the service running</td></tr>
+          <tr><td data-label="What">Your country and province or state, from your IP address</td><td data-label="Where it comes from">Our hosting provider, on each visit</td><td data-label="Why">To show the site in French in Quebec, show the Personal plan&apos;s price in your currency and check it&apos;s available where you are. We don&apos;t store them, except the country recorded when you start a checkout</td></tr>
+          <tr><td data-label="What">Your language choice</td><td data-label="Where it comes from">You, with the EN/FR switch, kept in a cookie on your device and saved with your account</td><td data-label="Why">To show the site in your language and have the AI write its reviews in it</td></tr>
+          <tr><td data-label="What">Anonymous visit statistics: pages visited, the site that referred you, country, browser and device type</td><td data-label="Where it comes from">Vercel Web Analytics, on every page except the admin area</td><td data-label="Why">To see how many people visit and which pages are useful. These statistics aren&apos;t linked to your account</td></tr>
         </tbody>
       </table>
       <p>
@@ -86,13 +86,13 @@ export function PrivacyEn() {
       <table className="legal-table">
         <thead><tr><th>Provider</th><th>What they do</th><th>Location</th></tr></thead>
         <tbody>
-          <tr><td>Vercel</td><td>Hosts the website and app, and counts anonymous visits (Web Analytics)</td><td>United States</td></tr>
-          <tr><td>Neon</td><td>Stores your account data (database)</td><td>United States</td></tr>
-          <tr><td>Clerk</td><td>Sign-up, sign-in and account security</td><td>United States</td></tr>
-          <tr><td>Anthropic</td><td>AI reviewing and writing (Claude)</td><td>United States</td></tr>
-          <tr><td>OpenAI</td><td>AI reviewing and writing, only if you add an OpenAI key</td><td>United States</td></tr>
-          <tr><td>Stripe</td><td>Payments and subscriptions for the Personal plan (receives your email, payment details and billing address)</td><td>United States</td></tr>
-          <tr><td>Google Fonts</td><td>Website fonts (receives your IP address only)</td><td>United States</td></tr>
+          <tr><td data-label="Provider">Vercel</td><td data-label="What they do">Hosts the website and app, and counts anonymous visits (Web Analytics)</td><td data-label="Location">United States</td></tr>
+          <tr><td data-label="Provider">Neon</td><td data-label="What they do">Stores your account data (database)</td><td data-label="Location">United States</td></tr>
+          <tr><td data-label="Provider">Clerk</td><td data-label="What they do">Sign-up, sign-in and account security</td><td data-label="Location">United States</td></tr>
+          <tr><td data-label="Provider">Anthropic</td><td data-label="What they do">AI reviewing and writing (Claude)</td><td data-label="Location">United States</td></tr>
+          <tr><td data-label="Provider">OpenAI</td><td data-label="What they do">AI reviewing and writing, only if you add an OpenAI key</td><td data-label="Location">United States</td></tr>
+          <tr><td data-label="Provider">Stripe</td><td data-label="What they do">Payments and subscriptions for the Personal plan (receives your email, payment details and billing address)</td><td data-label="Location">United States</td></tr>
+          <tr><td data-label="Provider">Google Fonts</td><td data-label="What they do">Website fonts (receives your IP address only)</td><td data-label="Location">United States</td></tr>
         </tbody>
       </table>
       <p>

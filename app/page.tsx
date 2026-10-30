@@ -121,6 +121,12 @@ const faqs = [
   {
     q: "Can I deduct fuzzyHR from my taxes?",
     a: "Usually not, if you're an employee looking for a job. In Canada, including Quebec, job-search costs aren't deductible for employees. In the US, federal law no longer allows employees to deduct them, though a few states, such as California, may still allow it if you itemize. If you're self-employed or a contractor and use fuzzyHR to find clients or contracts, it may count as a business expense. Your receipts are always available under Plan → Manage billing. This isn't tax advice, so check with an accountant or your tax authority.",
+    sources: [
+      { label: "Canada Revenue Agency: line 22900, employment expenses", url: "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-22900-other-employment-expenses.html", urlFr: "https://www.canada.ca/fr/agence-revenu/services/impot/particuliers/sujets/tout-votre-declaration-revenus/declaration-revenus/remplir-declaration-revenus/deductions-credits-depenses/ligne-22900-autres-depenses-emploi.html" },
+      { label: "Revenu Québec: line 207, employment expenses", url: "https://www.revenuquebec.ca/en/citizens/income-tax-return/completing-your-income-tax-return/how-to-complete-your-income-tax-return/line-by-line-help/201-to-260-net-income/line-207/", urlFr: "https://www.revenuquebec.ca/fr/citoyens/declaration-de-revenus/produire-votre-declaration-de-revenus/comment-remplir-votre-declaration-de-revenus/aide-par-ligne/201-a-260-revenu-net/ligne-207/" },
+      { label: "IRS Publication 529: miscellaneous deductions", url: "https://www.irs.gov/publications/p529" },
+      { label: "California FTB: Schedule CA instructions (itemized deductions)", url: "https://www.ftb.ca.gov/forms/2025/2025-540-ca-instructions.html" },
+    ],
   },
   {
     q: "Who can see my CV?",
@@ -133,7 +139,7 @@ const signupOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && proces
 
 export default async function Home() {
   await connection(); // the Personal price depends on the visitor's country
-  const { t } = await getT();
+  const { t, locale } = await getT();
   const plans = [
     ...basePlans.map((p) => ({ ...p, name: t(p.name), period: t(p.period), cta: t(p.cta), features: p.features.map((f) => t(f)) })),
     await personalPlan(t),
@@ -152,10 +158,16 @@ export default async function Home() {
           {signupOn ? (
             <>
               <Link className="nav-signin" href="/sign-in">{t("Sign in")}</Link>
-              <Link className="btn btn-small" href="/sign-up">{t("Start free")}</Link>
+              <Link className="btn btn-small nav-cta" href="/sign-up">
+                <span className="lbl-long">{t("Start free")}</span>
+                <span className="lbl-short" aria-hidden="true">{t("Free trial")}</span>
+              </Link>
             </>
           ) : (
-            <a className="btn btn-small" href="/app">{t("Try the demo")}</a>
+            <a className="btn btn-small nav-cta" href="/app">
+              <span className="lbl-long">{t("Try the demo")}</span>
+              <span className="lbl-short" aria-hidden="true">{t("Demo")}</span>
+            </a>
           )}
         </div>
       </header>
@@ -310,6 +322,17 @@ export default async function Home() {
             <details key={f.q}>
               <summary>{t(f.q)}</summary>
               <p>{t(f.a)}</p>
+              {"sources" in f && f.sources ? (
+                <p className="faq-sources small">
+                  {t("Sources:")}{" "}
+                  {f.sources.map((src, i) => (
+                    <span key={src.url}>
+                      {i > 0 ? " · " : ""}
+                      <a href={locale === "fr" && "urlFr" in src && src.urlFr ? src.urlFr : src.url} target="_blank" rel="noopener noreferrer">{t(src.label)}</a>
+                    </span>
+                  ))}
+                </p>
+              ) : null}
             </details>
           ))}
         </section>
