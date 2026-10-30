@@ -22,7 +22,8 @@
 
 ## Legal (Privacy Policy at /privacy, Terms at /terms; business details in lib/legal.ts)
 - [ ] Have a Quebec lawyer review both before taking payments
-- [ ] French versions: Quebec's Charter of the French Language requires French versions of the Terms (a standard-form contract) and the site for Quebec users
+- [x] French version of the site, workspace, Privacy Policy and Terms; French by default in Quebec
+- [ ] Have a francophone reviewer read the French text before launch
 - [ ] Keep a short written privacy impact assessment for storing data in the US (Law 25, s. 17)
 - [ ] Sign up for each provider's data processing terms where offered (Vercel, Neon, Clerk, Anthropic, OpenAI)
 

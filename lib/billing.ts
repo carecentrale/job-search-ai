@@ -32,7 +32,7 @@ export type PlanSettings = {
   selling: boolean;
 };
 
-export const DEFAULT_PLAN: PlanSettings = { priceCad: 1200, priceUsd: 900, appsPerMonth: 15, dailyRequests: 25, selling: false };
+export const DEFAULT_PLAN: PlanSettings = { priceCad: 1200, priceUsd: 999, appsPerMonth: 15, dailyRequests: 25, selling: false };
 
 type StripeStored = {
   enc: string;

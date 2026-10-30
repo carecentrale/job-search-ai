@@ -1,4 +1,5 @@
 "use client";
+import { LanguageSwitch, useT } from "@/components/I18n";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -44,6 +45,7 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
     return () => clearTimeout(t);
   }, [toast]);
 
+  const { t, msg } = useT();
   const { brief, apps, passed } = state;
   const taken = useMemo(() => new Set([...passed, ...apps.map((a) => a.job.id)]), [passed, apps]);
   const matches = useMemo(
@@ -64,10 +66,10 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
         ...s,
         apps: [{ id: `a-${job.id}`, job, status: "preparing", createdAt: isoNow() }, ...s.apps],
       }),
-      `Added ${job.company} to your tracker`,
+      t("Approved. {company} is in your tracker", { company: job.company }),
     );
   const pass = (job: ScoredJob) =>
-    update((s) => ({ ...s, passed: [...s.passed, job.id] }), `Passed on ${job.company}`);
+    update((s) => ({ ...s, passed: [...s.passed, job.id] }), t("Passed on {company}", { company: job.company }));
 
   const setStatus = (id: string, status: ApplicationStatus) =>
     update(
@@ -79,12 +81,12 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
             : a,
         ),
       }),
-      `Moved to ${STATUS_LABEL[status]}`,
+      t("Moved to {status}", { status: t(STATUS_LABEL[status]) }),
     );
   const followedUp = (id: string) =>
     update(
       (s) => ({ ...s, apps: s.apps.map((a) => (a.id === id ? { ...a, lastFollowUpAt: isoNow() } : a)) }),
-      "Follow-up logged. I'll remind you again in 7 days.",
+      t("Follow-up logged. I'll remind you again in 7 days."),
     );
 
   const nudgeAction = (appId: string, kind: string) => {
@@ -98,13 +100,13 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
       <header className="ws-top">
         <div className="wrap ws-top-inner">
           <Link className="wordmark" href="/">fuzzyHR</Link>
-          <nav className="ws-tabs" aria-label="Workspace">
+          <nav className="ws-tabs" aria-label={t("Workspace")}>
             {(
               [
-                ["today", "Today"],
-                ["shortlist", `Shortlist${matches.length ? ` (${matches.length})` : ""}`],
-                ["tracker", "Tracker"],
-                ["brief", "Your brief"],
+                ["today", t("Today")],
+                ["shortlist", `${t("Shortlist")}${matches.length ? ` (${matches.length})` : ""}`],
+                ["tracker", t("Tracker")],
+                ["brief", t("Your brief")],
               ] as [Tab, string][]
             ).map(([id, label]) => (
               <button key={id} className={tab === id ? "on" : ""} onClick={() => setTab(id)} aria-current={tab === id ? "page" : undefined}>
@@ -112,13 +114,14 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
               </button>
             ))}
           </nav>
+          <LanguageSwitch className="ws-lang" />
         </div>
       </header>
 
       <p className="demo-note wrap">
-        Demo with sample companies and data.{" "}
-        {signUp ? <><Link className="textbtn" href="/sign-up">Start your free week</Link> to get your own headhunter.{" "}</> : "Your own brief and real postings arrive when sign-up opens. "}
-        <button className="textbtn small" onClick={() => update(() => fresh(), "Demo reset")}>Reset demo</button>
+        {t("Demo with sample companies and data, in English.")}{" "}
+        {signUp ? <><Link className="textbtn" href="/sign-up">{t("Start your free week")}</Link> {t("to get your own headhunter.")}{" "}</> : `${t("Your own brief and real postings arrive when sign-up opens.")} `}
+        <button className="textbtn small" onClick={() => update(() => fresh(), t("Demo reset"))}>{t("Reset demo")}</button>
       </p>
 
       <main className="wrap ws-main">
@@ -127,22 +130,22 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
             <div className="today-head">
               <span className="avatar" aria-hidden="true">fz</span>
               <div>
-                <h1>Morning, {brief.name || "there"}.</h1>
+                <h1>{t("Morning")}, {brief.name || t("there")}.</h1>
                 <p className="muted">
-                  I read {readCount} new postings overnight. {matches.length} {matches.length === 1 ? "is" : "are"} worth your time.
+                  {t(matches.length === 1 ? "I read {n} new postings overnight. {m} is worth your time." : "I read {n} new postings overnight. {m} are worth your time.", { n: readCount, m: matches.length })}
                 </p>
               </div>
             </div>
 
             {nudges.length > 0 && (
               <div className="panel">
-                <h2>To do today</h2>
+                <h2>{t("To do today")}</h2>
                 <ul className="nudges">
                   {nudges.map((n) => (
                     <li key={n.appId + n.kind}>
-                      <span>{n.message}</span>
+                      <span>{msg(n.message)}</span>
                       <button className="btn btn-small" onClick={() => nudgeAction(n.appId, n.kind)}>
-                        {n.kind === "follow-up" ? "I followed up" : n.kind === "finish-application" ? "Mark as sent" : "Open tracker"}
+                        {n.kind === "follow-up" ? t("I followed up") : n.kind === "finish-application" ? t("Mark as sent") : t("Open tracker")}
                       </button>
                     </li>
                   ))}
@@ -152,11 +155,11 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
 
             <div className="panel">
               <div className="panel-head">
-                <h2>Top matches</h2>
-                <button className="textbtn" onClick={() => setTab("shortlist")}>See the full shortlist</button>
+                <h2>{t("Top matches")}</h2>
+                <button className="textbtn" onClick={() => setTab("shortlist")}>{t("See the full shortlist")}</button>
               </div>
               {matches.length === 0 ? (
-                <p className="muted">You have gone through everything. I will bring new matches tomorrow morning.</p>
+                <p className="muted">{t("You have gone through everything. I will bring new matches tomorrow morning.")}</p>
               ) : (
                 <ul className="jobs">
                   {matches.slice(0, 3).map((j) => <JobRow key={j.id} job={j} onApprove={approve} onPass={pass} />)}
@@ -169,11 +172,11 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
         {tab === "shortlist" && (
           <section className="panel">
             <div className="panel-head">
-              <h1>Shortlist</h1>
-              <p className="muted">Scored against your brief. Approve a role and I will prepare the application.</p>
+              <h1>{t("Shortlist")}</h1>
+              <p className="muted">{t("Scored against your brief. Approve a role and I will prepare the application.")}</p>
             </div>
             {matches.length === 0 ? (
-              <p className="muted">Nothing left to review. New matches arrive every morning.</p>
+              <p className="muted">{t("Nothing left to review. New matches arrive every morning.")}</p>
             ) : (
               <ul className="jobs">
                 {matches.map((j) => <JobRow key={j.id} job={j} onApprove={approve} onPass={pass} expanded />)}
@@ -184,14 +187,14 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
 
         {tab === "tracker" && (
           <section>
-            <h1 className="ws-h1">Tracker</h1>
+            <h1 className="ws-h1">{t("Tracker")}</h1>
             <div className="board">
               {COLUMNS.map((col) => {
                 const items = apps.filter((a) => a.status === col);
                 return (
                   <div key={col} className="col">
-                    <h2>{STATUS_LABEL[col]} <span className="count">{items.length}</span></h2>
-                    {items.length === 0 && <p className="muted small">None yet</p>}
+                    <h2>{t(STATUS_LABEL[col])} <span className="count">{items.length}</span></h2>
+                    {items.length === 0 && <p className="muted small">{t("None yet")}</p>}
                     {items.map((a) => (
                       <AppCard key={a.id} app={a} due={nudges.some((n) => n.appId === a.id && n.kind === "follow-up")} onStatus={setStatus} onFollowUp={followedUp} />
                     ))}
@@ -205,7 +208,7 @@ export default function DemoWorkspace({ signUp }: { signUp?: boolean }) {
         {tab === "brief" && (
           <BriefEditor
             brief={brief}
-            onSave={(b) => update((s) => ({ ...s, brief: b }), "Brief saved. Your shortlist is rescored.")}
+            onSave={(b) => update((s) => ({ ...s, brief: b }), t("Brief saved. Your shortlist is rescored."))}
           />
         )}
       </main>

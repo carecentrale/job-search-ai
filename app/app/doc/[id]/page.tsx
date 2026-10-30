@@ -7,6 +7,8 @@ import { logPageView } from "@/lib/activity";
 import { hasDb } from "@/lib/db";
 import { markdownToHtml, markdownToText } from "@/lib/markdown";
 import { getSeeker } from "@/lib/seekers";
+import { getT } from "@/lib/locale";
+import { intlLocale } from "@/lib/i18n";
 
 export const metadata: Metadata = { title: "Your application" };
 
@@ -20,23 +22,24 @@ export default async function DocPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ t?: string }>;
 }) {
-  const [{ id }, { t }] = await Promise.all([params, searchParams]);
+  const [{ id }, { t: templateParam }] = await Promise.all([params, searchParams]);
   const caller = hasDb() ? await currentCaller() : null;
   if (!caller) redirect("/sign-in");
 
+  const { t, locale } = await getT();
   const seeker = await getSeeker(caller.userId);
   const app = seeker?.applications.find((a) => a.id === decodeURIComponent(id));
   if (!app?.tailored) {
     return (
       <main className="wrap doc-missing">
-        <h1>Nothing written for this one yet</h1>
-        <p className="muted">Open your tracker and choose Write my CV and letter.</p>
-        <p><Link className="btn" href="/app">Back to your workspace</Link></p>
+        <h1>{t("Nothing written for this one yet")}</h1>
+        <p className="muted">{t("Open your tracker and choose Write my CV and letter.")}</p>
+        <p><Link className="btn" href="/app">{t("Back to your workspace")}</Link></p>
       </main>
     );
   }
 
-  const template: Template = TEMPLATES.includes(t as Template) ? (t as Template) : "minimal";
+  const template: Template = TEMPLATES.includes(templateParam as Template) ? (templateParam as Template) : "minimal";
   await logPageView(caller.userId, "document", { company: app.job.company, title: app.job.title, template });
   const { tailored, job } = app;
 
@@ -52,17 +55,17 @@ export default async function DocPage({
 
       {tailored.gaps.length > 0 && (
         <aside className="doc-gaps no-print">
-          <h2>Before you send it</h2>
-          <p>The posting asks for these, and your CV doesn&apos;t show them. I left them out rather than invent anything. If you do have this experience, add it to your CV under Your brief, then choose Write again in your tracker.</p>
+          <h2>{t("Before you send it")}</h2>
+          <p>{t("The posting asks for these, and your CV doesn't show them. I left them out rather than invent anything. If you do have this experience, add it to your CV under Your brief, then choose Write again in your tracker.")}</p>
           <ul>{tailored.gaps.map((g) => <li key={g}>{g}</li>)}</ul>
         </aside>
       )}
 
-      <article className="doc-page" aria-label="Tailored CV" dangerouslySetInnerHTML={{ __html: markdownToHtml(tailored.cv) }} />
-      <article className="doc-page doc-letter" aria-label="Cover letter" dangerouslySetInnerHTML={{ __html: markdownToHtml(tailored.coverLetter) }} />
+      <article className="doc-page" aria-label={t("Tailored CV")} dangerouslySetInnerHTML={{ __html: markdownToHtml(tailored.cv) }} />
+      <article className="doc-page doc-letter" aria-label={t("Cover letter")} dangerouslySetInnerHTML={{ __html: markdownToHtml(tailored.coverLetter) }} />
 
       <p className="doc-meta no-print muted small">
-        Written for {job.title} at {job.company} on {new Date(tailored.createdAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}.
+        {t("Written for {title} at {company} on {date}.", { title: job.title, company: job.company, date: new Date(tailored.createdAt).toLocaleDateString(intlLocale(locale), { month: "long", day: "numeric", year: "numeric" }) })}
       </p>
     </div>
   );

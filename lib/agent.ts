@@ -34,7 +34,7 @@ export async function reviewPending(s: SeekerRecord, trigger: "auto" | "manual" 
   await reserveCall(s, claude);
   let out;
   try {
-    out = await reviewMatches(claude.llm, s.cvText, s.brief, todo);
+    out = await reviewMatches(claude.llm, s.cvText, s.brief, todo, s.lang);
   } catch (e) {
     console.error("review failed", (e as { status?: number }).status, (e as Error).message);
     throw claudeError(e, claude);
@@ -107,7 +107,7 @@ export async function writeDocuments(s: SeekerRecord, appId: string, by: "you" |
     const usage = trialStatus(s, new Date(), appsPerMonth);
     const writtenThisPeriod = app.tailored && s.subscription.periodStart && new Date(app.tailored.createdAt) >= new Date(s.subscription.periodStart);
     if (!writtenThisPeriod && usage.limit !== null && usage.used >= usage.limit) {
-      const reset = s.subscription.periodEnd ? new Date(s.subscription.periodEnd).toLocaleDateString("en-CA", { month: "long", day: "numeric" }) : "your next billing date";
+      const reset = s.subscription.periodEnd ? new Date(s.subscription.periodEnd).toLocaleDateString(s.lang === "fr" ? "fr-CA" : "en-CA", { month: "long", day: "numeric" }) : s.lang === "fr" ? "votre prochaine date de facturation" : "your next billing date";
       throw new ApiError(402, `You've used your ${usage.limit} tailored applications this month. They reset on ${reset}. Rewrites of this month's applications are still free.`);
     }
   } else if (claude.source === "house") {

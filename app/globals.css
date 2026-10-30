@@ -649,3 +649,15 @@ a { color: inherit; }
 .break-panel { margin-top: 16px; }
 .pause-select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
 .got-job { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; }
+
+/* ---------- Language switch ---------- */
+.lang-switch { display: inline-flex; gap: 2px; border: 1px solid color-mix(in srgb, currentColor 35%, transparent); border-radius: 999px; padding: 2px; }
+.lang-switch button { font: 600 0.75rem/1 var(--font-body); letter-spacing: 0.04em; color: inherit; background: none; border: 0; border-radius: 999px; padding: 5px 8px; cursor: pointer; opacity: 0.7; }
+.lang-switch button[aria-pressed="true"] { background: color-mix(in srgb, currentColor 18%, transparent); opacity: 1; }
+.nav-lang { margin-left: auto; margin-right: 6px; } .nav-inner nav + .nav-lang { margin-left: 12px; }
+.ws-lang { margin-left: 8px; color: #fff; }
+@media (max-width: 560px) {
+  .today-head { flex-wrap: wrap; }
+  .today-head > div { flex: 1 1 0; min-width: 0; }
+  .today-head .hunt-btn { flex-basis: 100%; margin-left: 0; }
+}

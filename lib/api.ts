@@ -7,11 +7,13 @@ import { currentCaller } from "./auth";
 import { houseCallsToday, limits } from "./claude";
 import { canStoreSecrets } from "./crypto";
 import { db, hasDb } from "./db";
+import { translateMessage } from "./i18n";
+import { getLocale } from "./locale";
 import { ApiError } from "./errors";
 import { nudgesFor } from "./hunt/followup";
 import { STARTER_BOARDS } from "./hunt/boards";
 import { searchSitesOn } from "./hunt/search";
-import { getOrCreateSeeker, hasOwnKey, isOnboarded, isPersonal, latestBriefing, trialStatus, type SeekerRecord } from "./seekers";
+import { getOrCreateSeeker, hasOwnKey, isOnboarded, isPersonal, updateSeeker, latestBriefing, trialStatus, type SeekerRecord } from "./seekers";
 
 export { ApiError };
 
@@ -34,21 +36,27 @@ export async function withSeeker(handler: (s: SeekerRecord) => Promise<Response>
     if (!caller) throw new ApiError(401, "Sign in to use your headhunter.");
     seeker = await getOrCreateSeeker(caller.userId, caller.email);
     await touchLastSeen(seeker.id);
+    // Remember their language, so the morning AI review is written in it.
+    const locale = await getLocale();
+    if (seeker.lang !== locale) seeker = await updateSeeker(seeker.id, { lang: locale });
     return await handler(seeker);
   } catch (e) {
     if (e instanceof ApiError) {
+      const locale = await getLocale().catch(() => "en" as const);
+      const message = translateMessage(locale, e.message);
       if (seeker && e.code === "house_off") {
         await logAiWanted(seeker.id, featureOf(req));
-        return Response.json({ error: e.message, code: e.code }, { status: e.status });
+        return Response.json({ error: message, code: e.code }, { status: e.status });
       }
       // Plan limits and caps, so the owner can see who is running into them.
       if (seeker && (e.status === 402 || (e.status === 429 && !/^I hunted/.test(e.message)) || (e.status === 503 && /capacity/.test(e.message)))) {
         await logActivity(seeker.id, "limit_hit", { status: e.status, message: e.message });
       }
-      return Response.json({ error: e.message }, { status: e.status });
+      return Response.json({ error: message }, { status: e.status });
     }
     console.error(e);
-    return Response.json({ error: "Something went wrong on our side. Try again in a moment." }, { status: 500 });
+    const locale = await getLocale().catch(() => "en" as const);
+    return Response.json({ error: translateMessage(locale, "Something went wrong on our side. Try again in a moment.") }, { status: 500 });
   }
 }
 

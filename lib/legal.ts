@@ -14,6 +14,7 @@ export const LEGAL = {
   city: "Montreal",
   country: "Canada",
   minimumAge: 16,
-  effective: "October 27, 2026",
+  effective: "October 30, 2026",
+  effectiveFr: "30 octobre 2026",
   site: "https://fuzzyhr.vercel.app",
 };

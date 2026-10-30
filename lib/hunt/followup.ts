@@ -31,7 +31,7 @@ export function nudgesFor(apps: Application[], today = new Date()): Nudge[] {
         out.push({
           appId: a.id,
           kind: "interview-prep",
-          message: `Interview with ${who} ${until === 0 ? "today" : until === 1 ? "tomorrow" : "in 2 days"}. Time to prepare.`,
+          message: until === 0 ? `Interview with ${who} today. Time to prepare.` : until === 1 ? `Interview with ${who} tomorrow. Time to prepare.` : `Interview with ${who} in 2 days. Time to prepare.`,
         });
       }
     }

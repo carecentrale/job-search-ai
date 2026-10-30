@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import { frFR } from "@clerk/localizations";
+import { I18nProvider } from "@/components/I18n";
+import { getLocale } from "@/lib/locale";
 import SiteAnalytics from "@/components/SiteAnalytics";
 import "./globals.css";
 
@@ -12,9 +15,10 @@ export const metadata: Metadata = {
 /** Sign-up switches on once the Clerk keys are in Vercel; until then the site runs as a public demo. */
 const clerkOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
   const page = (
-    <html lang="en">
+    <html lang={locale === "fr" ? "fr-CA" : "en"}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -24,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body>
-        {children}
+        <I18nProvider locale={locale}>{children}</I18nProvider>
         <SiteAnalytics />
       </body>
     </html>
@@ -32,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   if (!clerkOn) return page;
   return (
     <ClerkProvider
+      localization={locale === "fr" ? frFR : undefined}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       signInFallbackRedirectUrl="/app"

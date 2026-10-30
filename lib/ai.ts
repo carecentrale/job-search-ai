@@ -249,7 +249,7 @@ export const REVIEW_BATCH = 12;
  * The headhunter's second look: read the keyword shortlist against the whole CV
  * and say which roles are worth the seeker's time. One call for the batch.
  */
-export async function reviewMatches(llm: LLM, cvText: string, brief: Brief, jobs: ScoredJob[]): Promise<WithUse<Map<string, Review>>> {
+export async function reviewMatches(llm: LLM, cvText: string, brief: Brief, jobs: ScoredJob[], lang: "en" | "fr" = "en"): Promise<WithUse<Map<string, Review>>> {
   const batch = jobs.slice(0, REVIEW_BATCH);
   const out = await llm.structured<{ reviews: { ref: string; verdict: Review["verdict"]; fit: number; why: string; concerns: string[] }[] }>({
     maxTokens: 3000,
@@ -261,7 +261,7 @@ export async function reviewMatches(llm: LLM, cvText: string, brief: Brief, jobs
       "- why: one or two plain sentences naming the specific evidence from the CV, or the specific mismatch.",
       "- concerns: up to 3 short phrases for must-haves the CV doesn't show, location or work-permit issues, or a posting that is only a short snippet. Empty if none.",
       "Judge only from the CV and posting. Do not assume skills the CV doesn't show.",
-      "Write `why` and `concerns` in English.",
+      lang === "fr" ? "Write `why` and `concerns` in Canadian French (as used in Quebec)." : "Write `why` and `concerns` in English.",
       UNTRUSTED,
     ].join("\n"),
     user: [

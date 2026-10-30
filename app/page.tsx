@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { SiteFooter } from "@/components/LegalPage";
+import { LanguageSwitch } from "@/components/I18n";
+import { getT } from "@/lib/locale";
+import type { T } from "@/lib/i18n";
 const work = [
   {
     verb: "Brief",
@@ -60,7 +63,7 @@ const basePlans = [
  * The Personal card, priced from Admin → Payments. The price always shows, for
  * transparency; the button says "Coming soon" until Personal is on sale.
  */
-async function personalPlan() {
+async function personalPlan(t: T) {
   const { DEFAULT_PLAN, fmtPrice, planSettings, salesStatus } = await import("@/lib/billing");
   const { visitorCurrency } = await import("@/lib/geo");
   const currency = await visitorCurrency();
@@ -75,21 +78,21 @@ async function personalPlan() {
     /* no database at build time: show the default prices */
   }
   return {
-    name: "Personal",
+    name: t("Personal"),
     featured: false,
-    cta: "Get Personal",
+    cta: t("Get Personal"),
     // One price, in the visitor's own currency. Outside Canada and the US, both are shown for reference.
     price: currency ? fmtPrice(currency === "cad" ? plan.priceCad : plan.priceUsd, currency) : fmtPrice(plan.priceCad, "cad"),
-    period: currency ? "a month" : `a month in Canada, ${fmtPrice(plan.priceUsd, "usd")} in the US`,
+    period: currency ? t("a month") : t("a month in Canada, {usd} in the US", { usd: fmtPrice(plan.priceUsd, "usd") }),
     features: [
-      "No API key needed: AI on us",
-      `${plan.appsPerMonth} tailored CVs and cover letters a month`,
-      "AI review of every hunt, and Autopilot",
-      "Tax included. Pause or cancel any time",
-      ...(currency ? [] : ["Available in Canada and the US for now"]),
+      t("No API key needed: AI on us"),
+      t("{n} tailored CVs and cover letters a month", { n: plan.appsPerMonth }),
+      t("AI review of every hunt, and Autopilot"),
+      t("Tax included. Pause or cancel any time"),
+      ...(currency ? [] : [t("Available in Canada and the US for now")]),
     ],
     soon: !ready || !currency,
-    soonLabel: !currency ? "Canada and US only, for now" : "Coming soon",
+    soonLabel: !currency ? t("Canada and US only, for now") : t("Coming soon"),
   };
 }
 
@@ -116,6 +119,10 @@ const faqs = [
     a: "Your trial ends and nothing is charged unless you choose a plan. Everything it prepared stays in your account to download.",
   },
   {
+    q: "Can I deduct fuzzyHR from my taxes?",
+    a: "Usually not, if you're an employee looking for a job. In Canada, including Quebec, job-search costs aren't deductible for employees. In the US, federal law no longer allows employees to deduct them, though a few states, such as California, may still allow it if you itemize. If you're self-employed or a contractor and use fuzzyHR to find clients or contracts, it may count as a business expense. Your receipts are always available under Plan → Manage billing. This isn't tax advice, so check with an accountant or your tax authority.",
+  },
+  {
     q: "Who can see my CV?",
     a: "Only you. Your documents are private to your account and you can delete them at any time.",
   },
@@ -126,24 +133,29 @@ const signupOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && proces
 
 export default async function Home() {
   await connection(); // the Personal price depends on the visitor's country
-  const plans = [...basePlans, await personalPlan()];
+  const { t } = await getT();
+  const plans = [
+    ...basePlans.map((p) => ({ ...p, name: t(p.name), period: t(p.period), cta: t(p.cta), features: p.features.map((f) => t(f)) })),
+    await personalPlan(t),
+  ];
   return (
     <>
       <header className="nav">
         <div className="wrap nav-inner">
           <a className="wordmark" href="#top">fuzzyHR</a>
           <nav aria-label="Main">
-            <a href="#how">What it does</a>
-            <a href="#templates">Templates</a>
-            <a href="#pricing">Pricing</a>
+            <a href="#how">{t("What it does")}</a>
+            <a href="#templates">{t("Templates")}</a>
+            <a href="#pricing">{t("Pricing")}</a>
           </nav>
+          <LanguageSwitch className="nav-lang" />
           {signupOn ? (
             <>
-              <Link className="nav-signin" href="/sign-in">Sign in</Link>
-              <Link className="btn btn-small" href="/sign-up">Start free</Link>
+              <Link className="nav-signin" href="/sign-in">{t("Sign in")}</Link>
+              <Link className="btn btn-small" href="/sign-up">{t("Start free")}</Link>
             </>
           ) : (
-            <a className="btn btn-small" href="/app">Try the demo</a>
+            <a className="btn btn-small" href="/app">{t("Try the demo")}</a>
           )}
         </div>
       </header>
@@ -152,72 +164,71 @@ export default async function Home() {
         <section className="hero-band">
           <div className="hero wrap">
           <div className="hero-copy">
-            <h1>Get to work with your personal headhunter.</h1>
+            <h1>{t("Get to work with your personal headhunter.")}</h1>
             <p className="lede">
-              Brief it once. It finds the roles worth your time, tailors your CV and cover letter
-              for each one, and keeps your search moving while you get on with your day.
+              {t("Brief it once. It finds the roles worth your time, tailors your CV and cover letter for each one, and keeps your search moving while you get on with your day.")}
             </p>
             <div className="hero-actions">
               {signupOn ? (
                 <>
-                  <Link className="btn" href="/sign-up">Start your free week</Link>
-                  <a className="link" href="/app">Try the demo first</a>
+                  <Link className="btn" href="/sign-up">{t("Start your free week")}</Link>
+                  <a className="link" href="/app">{t("Try the demo first")}</a>
                 </>
               ) : (
                 <>
-                  <a className="btn" href="/app">Try the demo</a>
-                  <a className="link" href="#pricing">See pricing</a>
+                  <a className="btn" href="/app">{t("Try the demo")}</a>
+                  <a className="link" href="#pricing">{t("See pricing")}</a>
                 </>
               )}
             </div>
-            <p className="fine">{signupOn ? "Free with your own Claude or OpenAI key, or 7 days on us. No card needed." : "Early access. The demo is open now and sign-up opens soon."}</p>
+            <p className="fine">{signupOn ? t("Free with your own Claude or OpenAI key, or 7 days on us. No card needed.") : t("Early access. The demo is open now and sign-up opens soon.")}</p>
           </div>
 
-          <aside className="briefing" aria-label="Example of a morning briefing from your headhunter">
+          <aside className="briefing" aria-label={t("Example of a morning briefing from your headhunter")}>
             <div className="briefing-head">
               <span className="avatar" aria-hidden="true">fz</span>
               <div>
-                <p className="briefing-from">Your headhunter</p>
-                <p className="briefing-time">Tuesday, 7:30 am</p>
+                <p className="briefing-from">{t("Your headhunter")}</p>
+                <p className="briefing-time">{t("Tuesday, 7:30 am")}</p>
               </div>
             </div>
-            <p className="briefing-hello">Morning, Alex. Here is what I did overnight.</p>
+            <p className="briefing-hello">{t("Morning, Alex. Here is what I did overnight.")}</p>
 
             <div className="briefing-stats">
-              <p><strong>38</strong> new postings read</p>
-              <p><strong>3</strong> worth your time</p>
+              <p><strong>38</strong> {t("new postings read")}</p>
+              <p><strong>3</strong> {t("worth your time")}</p>
             </div>
 
             <ul className="shortlist">
               <li>
-                <div className="fit"><span>92</span>fit</div>
+                <div className="fit"><span>92</span>{t("fit")}</div>
                 <div>
-                  <p className="role">Senior Product Manager, Payments</p>
-                  <p className="why">Northwind Bank, Toronto. Asks for sponsor bank work you led for 4 years.</p>
+                  <p className="role">{t("Senior Product Manager, Payments")}</p>
+                  <p className="why">{t("Northwind Bank, Toronto. Asks for sponsor bank work you led for 4 years.")}</p>
                 </div>
-                <span className="status status-ready">CV ready</span>
+                <span className="status status-ready">{t("CV ready")}</span>
               </li>
               <li>
-                <div className="fit"><span>84</span>fit</div>
+                <div className="fit"><span>84</span>{t("fit")}</div>
                 <div>
-                  <p className="role">Group PM, Merchant Platform</p>
-                  <p className="why">Harbourline, remote. Your migration work matches their roadmap.</p>
+                  <p className="role">{t("Group PM, Merchant Platform")}</p>
+                  <p className="why">{t("Harbourline, remote. Your migration work matches their roadmap.")}</p>
                 </div>
-                <span className="status">Drafting</span>
+                <span className="status">{t("Drafting")}</span>
               </li>
               <li>
-                <div className="fit fit-warn"><span>71</span>fit</div>
+                <div className="fit fit-warn"><span>71</span>{t("fit")}</div>
                 <div>
-                  <p className="role">Director of Product, Fintech</p>
-                  <p className="why">Posted 46 days ago. Might already be filled, worth a quick check.</p>
+                  <p className="role">{t("Director of Product, Fintech")}</p>
+                  <p className="why">{t("Posted 46 days ago. Might already be filled, worth a quick check.")}</p>
                 </div>
-                <span className="status status-warn">Check first</span>
+                <span className="status status-warn">{t("Check first")}</span>
               </li>
             </ul>
 
             <div className="briefing-foot">
-              <span>Follow up with Clearwater today. It has been 8 days.</span>
-              <a className="btn btn-small" href="#how">Review and send</a>
+              <span>{t("Follow up with Clearwater today. It has been 8 days.")}</span>
+              <a className="btn btn-small" href="#how">{t("Review and send")}</a>
             </div>
           </aside>
           </div>
@@ -226,15 +237,15 @@ export default async function Home() {
         <section id="how" className="band">
           <div className="wrap">
             <div className="section-head">
-              <h2 className="section-title">A headhunter that works for you, not the employer</h2>
-              <p>Recruiters are paid to fill the company&apos;s role. This one is paid by you to find yours.</p>
+              <h2 className="section-title">{t("A headhunter that works for you, not the employer")}</h2>
+              <p>{t("Recruiters are paid to fill the company's role. This one is paid by you to find yours.")}</p>
             </div>
             <ol className="work">
               {work.map((w) => (
                 <li key={w.verb}>
-                  <span className="verb">{w.verb}</span>
-                  <h3>{w.title}</h3>
-                  <p>{w.body}</p>
+                  <span className="verb">{t(w.verb)}</span>
+                  <h3>{t(w.title)}</h3>
+                  <p>{t(w.body)}</p>
                 </li>
               ))}
             </ol>
@@ -243,16 +254,13 @@ export default async function Home() {
 
         <section id="templates" className="wrap section">
           <div className="section-head">
-            <h2 className="section-title">Your CV, dressed for the room</h2>
-            <p>
-              Start with one of three templates. Or show it a CV whose look you like, and it will
-              match the layout, fonts and colours.
-            </p>
+            <h2 className="section-title">{t("Your CV, dressed for the room")}</h2>
+            <p>{t("Start with one of three templates, each built to print cleanly as a PDF.")}</p>
           </div>
           <div className="templates">
-            {templates.map((t) => (
-              <figure key={t.id} className="template">
-                <div className={`thumb thumb-${t.id}`} aria-hidden="true">
+            {templates.map((tpl) => (
+              <figure key={tpl.id} className="template">
+                <div className={`thumb thumb-${tpl.id}`} aria-hidden="true">
                   <div className="t-head"><span className="t-name" /><span className="t-line short" /></div>
                   <div className="t-body">
                     <span className="t-h" /><span className="t-line" /><span className="t-line" /><span className="t-line short" />
@@ -261,8 +269,8 @@ export default async function Home() {
                   </div>
                 </div>
                 <figcaption>
-                  <strong>{t.name}</strong>
-                  <span>{t.note}</span>
+                  <strong>{t(tpl.name)}</strong>
+                  <span>{t(tpl.note)}</span>
                 </figcaption>
               </figure>
             ))}
@@ -272,8 +280,8 @@ export default async function Home() {
         <section id="pricing" className="band">
           <div className="wrap">
             <div className="section-head">
-              <h2 className="section-title">Free, if you bring your own key</h2>
-              <p>{signupOn ? "Add your own Claude or OpenAI API key and fuzzyHR costs nothing, with no limits. No key? Start with a free week on us." : "Sign-up opens soon. Until then, try the demo."}</p>
+              <h2 className="section-title">{t("Free, if you bring your own key")}</h2>
+              <p>{signupOn ? t("Add your own Claude or OpenAI API key and fuzzyHR costs nothing, with no limits. No key? Start with a free week on us.") : t("Sign-up opens soon. Until then, try the demo.")}</p>
             </div>
             <div className="plans">
               {plans.map((p) => (
@@ -284,10 +292,10 @@ export default async function Home() {
                     {p.features.map((f) => <li key={f}>{f}</li>)}
                   </ul>
                   {p.soon ? (
-                    <span className="btn btn-ghost btn-disabled" aria-disabled="true">{"soonLabel" in p ? String(p.soonLabel) : "Coming soon"}</span>
+                    <span className="btn btn-ghost btn-disabled" aria-disabled="true">{"soonLabel" in p ? String(p.soonLabel) : t("Coming soon")}</span>
                   ) : (
                     <Link className={p.featured ? "btn" : "btn btn-ghost"} href={signupOn ? "/sign-up" : "/app"}>
-                      {signupOn ? p.cta : "Try the demo"}
+                      {signupOn ? p.cta : t("Try the demo")}
                     </Link>
                   )}
                 </div>
@@ -297,11 +305,11 @@ export default async function Home() {
         </section>
 
         <section className="wrap section faq">
-          <h2 className="section-title">Before you hire it</h2>
+          <h2 className="section-title">{t("Before you hire it")}</h2>
           {faqs.map((f) => (
             <details key={f.q}>
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
+              <summary>{t(f.q)}</summary>
+              <p>{t(f.a)}</p>
             </details>
           ))}
         </section>

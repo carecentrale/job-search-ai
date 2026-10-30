@@ -41,6 +41,8 @@ export type SeekerRecord = Seeker & {
   huntingPaused: boolean;
   /** Set when they told us they got a job. */
   gotJob: GotJob | null;
+  /** The language they use fuzzyHR in, so the AI can write its reviews in it. */
+  lang: "en" | "fr";
 };
 
 export type GotJob = { at: string; company: string | null; title: string | null; applicationId: string | null };
@@ -74,6 +76,7 @@ type Row = {
   resume_at: Date | null;
   hunting_paused: boolean | null;
   got_job: GotJob | null;
+  lang: string | null;
 };
 
 const EMPTY_BRIEF: Brief = { name: "", targetTitles: [], skills: [], locations: [], remoteOk: true, avoid: [] };
@@ -110,6 +113,7 @@ function toRecord(r: Row): SeekerRecord {
     },
     huntingPaused: Boolean(r.hunting_paused),
     gotJob: r.got_job ?? null,
+    lang: r.lang === "fr" ? "fr" : "en",
   };
 }
 
@@ -192,6 +196,7 @@ type Patch = Partial<{
   agent: AgentSettings;
   huntingPaused: boolean;
   gotJob: GotJob | null;
+  lang: "en" | "fr";
   /** Encrypted key and its last 4 characters, or null to remove. */
   claudeKey: { enc: string; last4: string; provider: Provider; model: string } | null;
 }>;
@@ -209,6 +214,7 @@ export async function updateSeeker(userId: string, p: Patch): Promise<SeekerReco
   if (p.extraBoards) set.extra_boards = sql.json(p.extraBoards);
   if (p.agent) set.agent = sql.json(p.agent);
   if (p.huntingPaused !== undefined) set.hunting_paused = p.huntingPaused;
+  if (p.lang) set.lang = p.lang;
   if (p.gotJob !== undefined) set.got_job = p.gotJob ? sql.json(p.gotJob) : null;
   if (p.claudeKey !== undefined) {
     set.claude_key_enc = p.claudeKey?.enc ?? null;
