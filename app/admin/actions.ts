@@ -6,6 +6,7 @@ import { aiWaiting, freshFreeWeek, requireAdmin, setRole, setTester } from "@/li
 import { houseKeyAvailable, removeHouseKey, saveHouseKey } from "@/lib/house";
 import { connectStripe, disconnectStripe, savePlan } from "@/lib/billing";
 import { siteUrl } from "@/lib/site";
+import { productionDeployments, promote, removeVercelToken, rollbackTo, saveVercelToken } from "@/lib/deploys";
 
 /** Make a user an admin, or take admin access away. Admins can't demote themselves, so the site always keeps one. */
 export async function changeRole(formData: FormData) {
@@ -105,4 +106,54 @@ export async function savePlanAction(_prev: KeyFormState, formData: FormData): P
   revalidatePath("/admin/billing");
   revalidatePath("/");
   return result;
+}
+
+/** Connect Vercel from Admin → Versions, for rollbacks. */
+export async function saveVercelTokenAction(_prev: KeyFormState, formData: FormData): Promise<KeyFormState> {
+  const admin = await requireAdmin();
+  const result = await saveVercelToken(String(formData.get("vercelToken") ?? ""), admin.email ?? admin.userId);
+  await logActivity(admin.userId, "release_action", { action: result.ok ? "vercel_connected" : "vercel_rejected" });
+  revalidatePath("/admin/versions");
+  return result;
+}
+
+export async function removeVercelTokenAction() {
+  const admin = await requireAdmin();
+  await removeVercelToken();
+  await logActivity(admin.userId, "release_action", { action: "vercel_disconnected" });
+  revalidatePath("/admin/versions");
+}
+
+/** Roll back to the deployment just before the live one. */
+export async function rollbackAction(_prev: KeyFormState, formData: FormData): Promise<KeyFormState> {
+  const admin = await requireAdmin();
+  const target = String(formData.get("deploymentId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim() || "Rolled back from fuzzyHR admin";
+  try {
+    const { deployments } = await productionDeployments();
+    const d = deployments.find((x) => x.id === target);
+    if (!d || d.state !== "READY") return { ok: false, message: "That deployment can't be rolled back to." };
+    await rollbackTo(target, reason);
+    await logActivity(admin.userId, "release_action", { action: "rollback", to: target, commit: d.sha?.slice(0, 7), message: d.message, reason });
+    revalidatePath("/admin/versions");
+    return { ok: true, message: "Rolled back. The site switches over within a minute. New pushes won't go live until you press Go live with latest." };
+  } catch (e) {
+    const status = (e as { status?: number }).status;
+    const msg = (e as Error).message;
+    return { ok: false, message: status === 402 || /upgrade to pro/i.test(msg) ? "Vercel's free plan can only roll back to the deployment just before the current one. For older versions, restore from git (see the steps below)." : `Vercel refused: ${msg}` };
+  }
+}
+
+/** Undo a rollback: put the newest deployment live and resume automatic deploys. */
+export async function goLiveLatestAction(_prev: KeyFormState, formData: FormData): Promise<KeyFormState> {
+  const admin = await requireAdmin();
+  const target = String(formData.get("deploymentId") ?? "");
+  try {
+    await promote(target);
+    await logActivity(admin.userId, "release_action", { action: "promote", to: target });
+    revalidatePath("/admin/versions");
+    return { ok: true, message: "Done. The latest version is going live, and new pushes will go live automatically again." };
+  } catch (e) {
+    return { ok: false, message: `Vercel refused: ${(e as Error).message}` };
+  }
 }

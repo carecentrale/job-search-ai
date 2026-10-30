@@ -45,6 +45,10 @@ export const FR: Record<string, string> = {
   "Questions:": "Questions :",
   "our contact email (coming soon; it will be posted here)": "notre adresse courriel (bientôt; elle sera publiée ici)",
   "Built by Nicola Delnero with Claude": "Conçu par Nicola Delnero avec Claude",
+  "What's new": "Nouveautés",
+  "What changed in each version of fuzzyHR, newest first.": "Ce qui a changé dans chaque version de fuzzyHR, de la plus récente à la plus ancienne.",
+  "Version {v}": "Version {v}",
+  "Current": "Actuelle",
 
   // ---------- Landing page ----------
   "What it does": "Ce qu'il fait",

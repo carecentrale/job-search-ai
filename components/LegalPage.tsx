@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LanguageSwitch } from "@/components/I18n";
+import { CURRENT_VERSION } from "@/lib/changelog";
 import { LEGAL } from "@/lib/legal";
 import { getT } from "@/lib/locale";
 
@@ -49,8 +50,10 @@ export async function SiteFooter() {
         <nav className="footer-links" aria-label={t("Legal")}>
           <Link href="/privacy">{t("Privacy")}</Link>
           <Link href="/terms">{t("Terms")}</Link>
+          <Link href="/whats-new">{t("What's new")}</Link>
           {LEGAL.contactEmail ? <a href={`mailto:${LEGAL.contactEmail}`}>{t("Contact")}</a> : null}
         </nav>
+        <Link className="footer-version" href="/whats-new">v{CURRENT_VERSION}</Link>
         <span>{t("Built by Nicola Delnero with Claude")}</span>
       </div>
     </footer>

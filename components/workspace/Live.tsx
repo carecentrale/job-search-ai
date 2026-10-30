@@ -8,6 +8,7 @@ import type { AgentSettings, ApplicationStatus, Brief, ScoredJob } from "@/lib/h
 import { AppCard, BriefEditor, COLUMNS, JobRow, STATUS_LABEL } from "./parts";
 import { LanguageSwitch, useT } from "@/components/I18n";
 import type { T } from "@/lib/i18n";
+import { CURRENT_VERSION } from "@/lib/changelog";
 
 type Tab = "today" | "shortlist" | "tracker" | "brief" | "plan";
 type Reply = {
@@ -338,6 +339,7 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
             )}
             <PlanPanel state={state} busy={busy === "key" || busy === "notify"} onSave={saveKey} onRemove={removeKey} onBack={() => setTab("today")} onNotify={() => notifyMe("notify me")} />
             <DataPanel busy={busy === "delete"} onDelete={deleteAccount} />
+            <p className="muted small ws-version">fuzzyHR v{CURRENT_VERSION} · <Link href="/whats-new">{t("What's new")}</Link></p>
           </>
         ) : !state.onboarded ? (
           <Onboarding state={state} suggested={suggested} busy={busy} onCv={uploadCv} onBrief={saveBrief} />

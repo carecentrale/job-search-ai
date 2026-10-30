@@ -45,6 +45,7 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   paused: "Paused",
   resumed: "Resumed",
   got_job: "Got a job",
+  release_action: "Release",
 };
 
 export function describe(type: string, d: D): string {
@@ -136,6 +137,11 @@ function describeEvent(type: string, d: D): string {
       return `Resumed hunting${d.chargedNow ? ", and a new paid month started" : ""}.`;
     case "got_job":
       return `Got a job${d.company ? ` at ${s(d.company)}` : ""}${d.title ? ` as ${s(d.title)}` : ""}${d.fromTracker ? " (from their tracker)" : ""}. Hunting stopped${d.wasPaying ? " and billing paused" : ""}.`;
+    case "release_action": {
+      const what: Record<string, string> = { vercel_connected: "Connected Vercel for rollbacks.", vercel_rejected: "Tried to connect Vercel (token rejected).", vercel_disconnected: "Disconnected Vercel.", promote: "Put the latest version live (undid a rollback)." };
+      if (d.action === "rollback") return `Rolled the site back to ${s(d.commit)}${d.message ? ` (${s(d.message)})` : ""}. Reason: ${s(d.reason)}`;
+      return what[s(d.action)] ?? JSON.stringify(d);
+    }
     case "data_exported":
       return "Downloaded a copy of their data.";
     case "account_deleted":

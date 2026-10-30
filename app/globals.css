@@ -695,3 +695,17 @@ a { color: inherit; }
 @media (max-width: 480px) {
   .nav .nav-signin + .nav-cta { display: none; }
 }
+
+/* ---------- What's new ---------- */
+.releases { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 28px; }
+.releases > li { border-left: 3px solid var(--line); padding-left: 18px; }
+.releases > li:first-child { border-left-color: var(--brass); }
+.release-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--muted); margin: 0 0 4px; }
+.release-version { font-weight: 700; color: var(--ink); }
+.release-meta .pill { margin-left: 0; }
+.releases h2 { font-size: 1.4rem; margin: 0 0 8px; }
+.releases ul { padding-left: 1.2em; margin: 0; display: grid; gap: 6px; }
+.footer-version { color: inherit; opacity: 0.7; text-decoration: none; font-variant-numeric: tabular-nums; }
+.footer-version:hover { opacity: 1; text-decoration: underline; }
+.rollback-form { margin-top: 10px; } .release-admin { padding-left: 1.2em; display: grid; gap: 4px; }
+.ws-version { text-align: center; margin-top: 18px; }
