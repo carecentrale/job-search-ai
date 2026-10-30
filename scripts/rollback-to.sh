@@ -5,12 +5,18 @@
 # or roll "back" to the newer tag the same way.
 set -euo pipefail
 tag="${1:?usage: scripts/rollback-to.sh vX.Y.Z}"
-git fetch --tags origin
-git rev-parse -q --verify "refs/tags/$tag" >/dev/null || { echo "No tag $tag. Tags: $(git tag | tr '\n' ' ')"; exit 1; }
+git fetch --tags origin || true
+# The tag if it exists; otherwise the commit recorded for that version in release-commits.json.
+if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+  ref="$tag"
+else
+  ref=$(node -p "require('./release-commits.json')['${tag#v}'] || ''")
+  [ -n "$ref" ] || { echo "No version $tag. Known: $(node -p "Object.keys(require('./release-commits.json')).join(' ')")"; exit 1; }
+fi
 git diff --quiet && git diff --cached --quiet || { echo "Commit or stash local changes first."; exit 1; }
 # Replace the working tree with the tag's tree, including deletions of files added since.
 git rm -r -q --cached . && git clean -fdq -e node_modules -e .next -e .env.local
-git checkout "$tag" -- .
+git checkout "$ref" -- .
 git add -A
 git commit -m "Roll back to $tag
 

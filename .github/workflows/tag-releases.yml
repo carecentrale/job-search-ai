@@ -1,0 +1,48 @@
+# Tags every fuzzyHR release in GitHub and publishes its notes as a GitHub Release.
+# Runs on each push to main. Versions and their commits come from release-commits.json;
+# the version in package.json is tagged on the pushed commit if it isn't in that file yet.
+name: Tag releases
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create missing tags and releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          current=$(node -p "require('./package.json').version")
+          pairs=$(node -e '
+            const m = require("./release-commits.json");
+            const v = require("./package.json").version;
+            if (!m[v]) m[v] = process.env.GITHUB_SHA;
+            for (const [k, sha] of Object.entries(m)) console.log(k + " " + sha);
+          ')
+          echo "$pairs" | while read -r v sha; do
+            [ -z "$v" ] && continue
+            if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then echo "v$v already tagged"; continue; fi
+            git tag -a "v$v" "$sha" -m "fuzzyHR v$v"
+            git push origin "refs/tags/v$v"
+            notes=$(node -e '
+              const src = require("fs").readFileSync("lib/changelog.ts", "utf8");
+              const v = process.argv[1];
+              const block = src.split("version: ").find((b) => b.startsWith(JSON.stringify(v)));
+              if (!block) { console.log("fuzzyHR v" + v); process.exit(0); }
+              const en = block.split("en: {")[1].split("fr: {")[0];
+              const title = (en.match(/title: "([^"]*)"/) || [])[1] || "";
+              const items = [...en.matchAll(/^\s+"(.*)",?$/gm)].map((x) => "- " + x[1].replace(/\\"/g, "\""));
+              console.log(title + "\n\n" + items.join("\n"));
+            ' "$v")
+            gh release create "v$v" --verify-tag --title "v$v" --notes "$notes" $([ "$v" = "$current" ] && echo --latest || echo --latest=false) || true
+          done

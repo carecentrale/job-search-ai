@@ -6,11 +6,11 @@ fuzzyHR uses version numbers like `0.7.0` (major.minor.patch):
 - **minor** (0.8.0): new features
 - **major** (1.0.0): the public launch, or a change that breaks how people use it
 
-The current version is in `package.json` and at the top of `lib/changelog.ts`. Every release is a git tag (`v0.7.0`) on GitHub. The site shows the version in the footer and on the Plan page, and the plain-language notes at **/whats-new** (English and French).
+The current version is in `package.json` and at the top of `lib/changelog.ts`. Every release is a git tag (`v0.7.0`) on GitHub, created automatically by the *Tag releases* GitHub Action, which also publishes the notes as a GitHub Release. `release-commits.json` records which commit each version is, so rolling back works even before a tag exists. The site shows the version in the footer and on the Plan page, and the plain-language notes at **/whats-new** (English and French).
 
 ## Releasing
 1. Add the new version's notes at the top of `lib/changelog.ts`, in English and French, written for users (what they can do now), not for developers.
-2. Run `scripts/release.sh 0.8.0`. It sets the version, builds, commits, tags and pushes. Vercel deploys it.
+2. Run `scripts/release.sh 0.8.0`. It sets the version, builds, commits and pushes, and records the commit in `release-commits.json`. Vercel deploys it, and GitHub tags it.
 
 ## Rolling back
 Pick the quickest that fits:
