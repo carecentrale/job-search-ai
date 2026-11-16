@@ -33,6 +33,7 @@ export const ACTIVITY_LABEL: Record<string, string> = {
   account_deleted: "Deleted their account",
   page_view: "Page view",
   ai_wanted: "Wanted AI (no key yet)",
+  availability_wanted: "Wants Personal in their country",
   tester_changed: "Tester flag",
   fresh_free_week: "Fresh free week",
   house_key_changed: "fuzzyHR's AI key",
@@ -110,6 +111,8 @@ function describeEvent(type: string, d: D): string {
     }
     case "ai_wanted":
       return `Wanted ${s(d.feature) === "notify me" ? "to be told when free AI writing is on" : `to use AI (${s(d.feature)})`} before your Anthropic key was set up.`;
+    case "availability_wanted":
+      return `Asked to be told when Personal is available in ${s(d.country) || "their country"}${d.phone ? ", and left a phone number" : ""}.`;
     case "tester_changed":
       return `${d.tester ? "Marked as a tester" : "No longer a tester"} by ${s(d.by)}.`;
     case "fresh_free_week":

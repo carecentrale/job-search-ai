@@ -35,7 +35,7 @@ export function PlanForm({ plan, connected }: { plan: PlanSettings; connected: b
         <label>Price in Canada <span className="muted small">CA$ a month, tax included</span>
           <input name="priceCad" inputMode="decimal" defaultValue={money(plan.priceCad)} required />
         </label>
-        <label>Price elsewhere <span className="muted small">US$ a month, tax included</span>
+        <label>Price in the US <span className="muted small">US$ a month, tax included</span>
           <input name="priceUsd" inputMode="decimal" defaultValue={money(plan.priceUsd)} required />
         </label>
         <label>Tailored applications <span className="muted small">a month</span>

@@ -3,6 +3,7 @@ import { logActivity, logAiWanted, touchLastSeen } from "./activity";
 import { houseKeyAvailable } from "./house";
 import { fmtPrice, salesStatus } from "./billing";
 import { visitorCurrency } from "./geo";
+import { availabilityRequestFor } from "./availability";
 import { currentCaller } from "./auth";
 import { houseCallsToday, limits } from "./claude";
 import { canStoreSecrets } from "./crypto";
@@ -116,6 +117,8 @@ export async function stateFor(s: SeekerRecord) {
         appsPerMonth: sales.plan.appsPerMonth,
         dailyRequests: sales.plan.dailyRequests,
         testMode: sales.mode === "test",
+        /** Outside Canada and the US: have they asked to be told when Personal reaches their country? */
+        waitlisted: currency === null ? Boolean(await availabilityRequestFor(s.id)) : false,
       },
     },
     /** True when fuzzyHR's own AI key isn't set yet, so the workspace shows "coming soon" instead of the free week. */

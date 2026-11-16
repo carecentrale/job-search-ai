@@ -233,6 +233,9 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
       setBusy(null);
     }
   };
+  const joinWaitlist = (phone: string) =>
+    act("waitlist", () => call("/api/me/availability", json("POST", { phone, consent: true })), () => t("You're on the list. I'll email you when Personal is available in your country."));
+  const leaveWaitlist = () => act("waitlist", () => call("/api/me/availability", { method: "DELETE" }), () => t("Done. You're off the list."));
   const subscribe = () => goTo("/api/me/billing/checkout");
   const manageBilling = () => goTo("/api/me/billing/portal");
   const pause = (months: number | null) =>
@@ -332,7 +335,7 @@ export default function LiveWorkspace({ clerk, isAdmin = false, adminAlert = 0 }
           <>
             {(state.billing.personal || state.billing.canManage) && <PersonalPanel state={state} busy={busy === "billing"} onManage={manageBilling} />}
             {!state.billing.personal && state.claude.mode !== "own" && (
-              <PersonalOffer offer={state.billing.offer} busy={busy === "billing"} onSubscribe={subscribe} />
+              <PersonalOffer offer={state.billing.offer} busy={busy === "billing" || busy === "waitlist"} onSubscribe={subscribe} onJoin={joinWaitlist} onLeave={leaveWaitlist} />
             )}
             {state.onboarded && (
               <BreakPanel state={state} busy={busy === "pause"} onPause={pause} onResume={resume} onGotJob={gotJob} />
@@ -1004,8 +1007,10 @@ function DataPanel({ busy, onDelete }: { busy: boolean; onDelete: () => void }) 
 type Offer = WorkspaceState["billing"]["offer"];
 
 /** The Personal plan, priced in the visitor's currency (CAD in Canada, USD in the US). */
-function PersonalOffer({ offer, busy, onSubscribe }: { offer: Offer; busy: boolean; onSubscribe: () => void }) {
+function PersonalOffer({ offer, busy, onSubscribe, onJoin, onLeave }: { offer: Offer; busy: boolean; onSubscribe: () => void; onJoin: (phone: string) => void; onLeave: () => void }) {
   const { t } = useT();
+  const [phone, setPhone] = useState("");
+  const [consent, setConsent] = useState(false);
   return (
     <section className="panel personal-offer">
       <div className="panel-head">
@@ -1030,11 +1035,36 @@ function PersonalOffer({ offer, busy, onSubscribe }: { offer: Offer; busy: boole
           </p>
         </>
       ) : (
-        <p className="muted small">
-          {offer.available
-            ? t("Coming soon. Until then, add your own Claude or OpenAI key below and fuzzyHR is free.")
-            : t("Personal is available in Canada and the US for now. fuzzyHR is free everywhere with your own Claude or OpenAI key.")}
-        </p>
+        offer.available ? (
+          <p className="muted small">{t("Coming soon. Until then, add your own Claude or OpenAI key below and fuzzyHR is free.")}</p>
+        ) : offer.waitlisted ? (
+          <p className="small">
+            <strong>{t("You're on the list.")}</strong> {t("I'll email you when Personal is available in your country. Until then, fuzzyHR is free with your own Claude or OpenAI key.")}{" "}
+            <button className="textbtn small" disabled={busy} onClick={onLeave}>{t("Take me off the list")}</button>
+          </p>
+        ) : (
+          <form
+            className="key-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onJoin(phone);
+            }}
+          >
+            <p className="small">
+              <strong>{t("Available soon in your area.")}</strong> {t("Personal is sold in Canada and the US for now. Want to know when it reaches your country? I'll write to the email you signed up with.")}
+            </p>
+            <label htmlFor="waitlist-phone" className="small">{t("Phone number, with country code (optional)")}</label>
+            <input id="waitlist-phone" type="tel" autoComplete="tel" inputMode="tel" placeholder="+33 6 12 34 56 78" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <div className="toggle-row">
+              <input id="waitlist-consent" type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <label htmlFor="waitlist-consent" className="small">
+                {t("I agree that fuzzyHR may contact me by email, and by phone or text if I gave a number, about when the Personal plan is available in my country. I can withdraw this any time.")} <Link href="/privacy">{t("Privacy Policy")}</Link>
+              </label>
+            </div>
+            <div><button className="btn btn-small" type="submit" disabled={busy || !consent}>{t("Tell me when it's available")}</button></div>
+            <p className="muted small">{t("fuzzyHR is free everywhere with your own Claude or OpenAI key.")}</p>
+          </form>
+        )
       )}
     </section>
   );

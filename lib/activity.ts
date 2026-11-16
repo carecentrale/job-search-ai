@@ -34,6 +34,7 @@ export type ActivityType =
   | "account_deleted"
   | "page_view"
   | "ai_wanted"
+  | "availability_wanted"
   | "tester_changed"
   | "fresh_free_week"
   | "house_key_changed"

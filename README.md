@@ -13,7 +13,7 @@ Live at **https://fuzzyhr.vercel.app** · Built by [Nicola Delnero](https://link
 - **Tailor.** For each role the user approves, Claude rewrites the CV and writes a cover letter using **only facts in the CV**. Anything the posting asks for that the CV doesn't show is listed as a gap, never invented. Documents open in three templates (Minimal, Bold, Elegant) and save as PDF from the browser.
 - **Follow up.** A tracker (Preparing → Applied → Interviewing → Offer → Closed) with reminders: follow up 7 days after applying, prepare 2 days before an interview.
 - **Free with your own key.** Users who add their own Claude or OpenAI API key (Plan tab, or AI key and plan in the profile menu) use fuzzyHR free with no limits; their provider bills them directly. Keys are recognised by prefix, checked with the provider, stored encrypted (AES-256-GCM) and never sent back to the browser. For OpenAI keys, fuzzyHR picks the newest general GPT model the key can use.
-- **Free week on us.** Without a key, new accounts get 7 days and 5 tailored applications on fuzzyHR's key, within daily caps per user and overall. Paid plans are not built yet.
+- **Free week on us.** Without a key, new accounts get 7 days and 5 tailored applications on fuzzyHR's key, within daily caps per user and overall. The paid Personal plan is described under Paid plans.
 
 Signed-out visitors get a demo at `/app` with sample data.
 

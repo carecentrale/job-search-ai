@@ -99,6 +99,17 @@ async function migrate(db: Sql): Promise<void> {
       output_tokens bigint not null default 0,
       primary key (user_id, day, source)
     )`;
+  // People outside Canada and the US who asked to be told when Personal reaches their country.
+  await db`
+    create table if not exists availability_requests (
+      user_id    text primary key,
+      email      text not null,
+      phone      text,
+      country    text,
+      lang       text,
+      consent_at timestamptz not null default now(),
+      created_at timestamptz not null default now()
+    )`;
 }
 
 /**

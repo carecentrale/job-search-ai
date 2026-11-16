@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BillingForms } from "./forms";
 import { requireAdmin, subscribers } from "@/lib/admin";
+import { availabilityList } from "@/lib/availability";
 import { billingInfo, fmtPrice, salesStatus } from "@/lib/billing";
 import { ago, when } from "@/lib/describe";
 import { houseKeyAvailable } from "@/lib/house";
@@ -20,7 +21,7 @@ const STATUS: Record<string, string> = {
 export default async function AdminBilling() {
   await requireAdmin();
   const houseOn = await houseKeyAvailable();
-  const [info, sales, subs] = await Promise.all([billingInfo(), salesStatus(houseOn), subscribers()]);
+  const [info, sales, subs, waiting] = await Promise.all([billingInfo(), salesStatus(houseOn), subscribers(), availabilityList()]);
   const c = info.connected;
   const paying = subs.filter((s) => s.plan === "personal");
   const byCur = (cur: string) => paying.filter((s) => s.plan_currency === cur).length;
@@ -117,6 +118,36 @@ export default async function AdminBilling() {
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-head">
+          <h2>Waiting for Personal in their country</h2>
+          <p className="muted small">People outside Canada and the US who asked to be told when Personal is available. Each one agreed to be contacted about that, and only that. Emails are confirmed at sign-up; phone numbers are as typed, not verified.</p>
+        </div>
+        {waiting.rows.length === 0 ? (
+          <p className="muted">Nobody yet.</p>
+        ) : (
+          <>
+            <p className="small">{waiting.rows.length} waiting: {waiting.byCountry.map((c) => `${c.country} ${c.n}`).join(", ")}.</p>
+            <div className="table-wrap">
+              <table className="admin-table">
+                <thead><tr><th>Email</th><th>Phone</th><th>Country</th><th>Language</th><th>Agreed</th></tr></thead>
+                <tbody>
+                  {waiting.rows.map((w) => (
+                    <tr key={w.user_id}>
+                      <td><Link href={`/admin/users/${encodeURIComponent(w.user_id)}`}>{w.email}</Link></td>
+                      <td className="mono">{w.phone ?? "—"}</td>
+                      <td>{w.country ?? "unknown"}</td>
+                      <td>{(w.lang ?? "en").toUpperCase()}</td>
+                      <td>{when(w.consent_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
     </div>

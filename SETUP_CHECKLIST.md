@@ -9,7 +9,7 @@
 - [x] **Clerk** connected to fuzzyhr: sign-up and sign-in
 - [x] **Neon** connected to fuzzyhr as `DATABASE_URL`: accounts and saved data
 - [x] **Encryption**: automatic, derived from the Clerk secret. Optional: set `ENCRYPTION_KEY` in Vercel to use your own.
-- [ ] **fuzzyHR's AI key**: paste it in **Admin → fuzzyHR's AI key** when you're ready (no Vercel needed). Until then users see "free AI writing is switching on soon", and Admin alerts you, with a dot on your Admin link, when a real user (not a tester) is waiting. Then use "Give them a fresh free week".
+- [x] **fuzzyHR's AI key** (set 16 Nov 2026): paste it in **Admin → fuzzyHR's AI key** when you're ready (no Vercel needed). Until then users see "free AI writing is switching on soon", and Admin alerts you, with a dot on your Admin link, when a real user (not a tester) is waiting. Then use "Give them a fresh free week".
 - [x] **Admin**: the first account (yours) is admin automatically; no setting needed
 - [x] **Morning hunt**: runs at 7 am without any setting (at most once every 20 hours). Optional: `CRON_SECRET` in Vercel restricts it to Vercel Cron.
 - [ ] Optional, more jobs: free keys from developer.adzuna.com (`ADZUNA_APP_ID`, `ADZUNA_APP_KEY`) and jooble.org/api/about (`JOOBLE_API_KEY`). Adzuna's terms allow a 14-day trial for commercial use; after that it needs a licence agreement with Adzuna, and their logo as attribution. Check Jooble's partner terms too.
@@ -17,11 +17,12 @@
 
 ## Payments (Admin → Payments)
 - [ ] On the live site, paste your Stripe **test** secret key (sk_test_…), set prices, switch on sales, and buy with card 4242 4242 4242 4242
-- [ ] Then connect your **live** key (sk_live_…) and save the plan again to publish live prices
-- [ ] fuzzyHR's AI key must be set too (Overview): Personal runs on it
+- [x] Then connect your **live** key (sk_live_…) and save the plan again to publish live prices (live and on sale since 16 Nov 2026, without a test-mode run)
+- [x] fuzzyHR's AI key must be set too (Overview): Personal runs on it
+- [ ] Make one real purchase to check checkout, pause and cancel end to end, then refund it in Stripe
 
 ## Legal (Privacy Policy at /privacy, Terms at /terms; business details in lib/legal.ts)
-- [ ] Have a Quebec lawyer review both before taking payments
+- [ ] Have a Quebec lawyer review both (the owner chose to start taking payments without it)
 - [x] French version of the site, workspace, Privacy Policy and Terms; French by default in Quebec
 - [ ] Have a francophone reviewer read the French text before launch
 - [ ] Keep a short written privacy impact assessment for storing data in the US (Law 25, s. 17)

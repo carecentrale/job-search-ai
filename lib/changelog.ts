@@ -14,6 +14,26 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    version: "0.8.0",
+    date: "2026-11-16",
+    en: {
+      title: "Personal is on sale, and a list for other countries",
+      items: [
+        "The Personal plan is now on sale in Canada (CA$12 a month) and the US (US$9.99 a month), tax included.",
+        "Outside Canada and the US? Create a free account and, under Plan, ask to be told when Personal is available in your country. You can leave a phone number too, and take yourself off the list any time.",
+        "The Privacy Policy now explains what we keep when you join that list, and why.",
+      ],
+    },
+    fr: {
+      title: "Le forfait Personnel est offert, et une liste pour les autres pays",
+      items: [
+        "Le forfait Personnel est maintenant offert au Canada (12 $ CA par mois) et aux États-Unis (9,99 $ US par mois), taxes incluses.",
+        "Vous êtes ailleurs? Créez un compte gratuit puis, sous Forfait, demandez à être averti quand le forfait Personnel sera offert dans votre pays. Vous pouvez aussi laisser un numéro de téléphone, et vous retirer de la liste en tout temps.",
+        "La Politique de confidentialité explique maintenant ce que nous conservons lorsque vous vous inscrivez à cette liste, et pourquoi.",
+      ],
+    },
+  },
+  {
     version: "0.7.0",
     date: "2026-10-30",
     en: {

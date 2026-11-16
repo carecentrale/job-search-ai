@@ -89,10 +89,12 @@ async function personalPlan(t: T) {
       t("{n} tailored CVs and cover letters a month", { n: plan.appsPerMonth }),
       t("AI review of every hunt, and Autopilot"),
       t("Tax included. Pause or cancel any time"),
-      ...(currency ? [] : [t("Available in Canada and the US for now")]),
+      ...(currency ? [] : [t("Sold in Canada and the US for now. Available soon in your area")]),
     ],
-    soon: !ready || !currency,
-    soonLabel: !currency ? t("Canada and US only, for now") : t("Coming soon"),
+    // Outside Canada and the US, the button invites them onto the "tell me when it's available" list instead.
+    soon: Boolean(currency) && !ready,
+    soonLabel: t("Coming soon"),
+    ...(currency ? {} : { cta: t("Tell me when it's available"), note: t("Create a free account, then add yourself to the list under Plan.") }),
   };
 }
 
@@ -310,6 +312,7 @@ export default async function Home() {
                       {signupOn ? p.cta : t("Try the demo")}
                     </Link>
                   )}
+                  {"note" in p && signupOn ? <p className="muted small" style={{ marginTop: 8 }}>{String(p.note)}</p> : null}
                 </div>
               ))}
             </div>

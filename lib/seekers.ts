@@ -238,6 +238,7 @@ export async function deleteSeekerData(userId: string): Promise<void> {
     await tx`delete from activity where user_id = ${userId}`;
     await tx`delete from claude_usage where user_id = ${userId}`;
     await tx`delete from briefings where user_id = ${userId}`;
+    await tx`delete from availability_requests where user_id = ${userId}`;
     await tx`delete from seekers where user_id = ${userId}`;
   });
 }
@@ -253,7 +254,8 @@ export async function exportSeekerData(userId: string) {
   const briefings = await sql`select date, data, created_at from briefings where user_id = ${userId} order by date desc`;
   const usage = await sql`select day, source, calls, input_tokens, output_tokens from claude_usage where user_id = ${userId} order by day desc`;
   const activity = await sql`select at, type, detail from activity where user_id = ${userId} order by at desc`;
-  return { exportedAt: new Date().toISOString(), account: seeker ?? null, briefings, aiUsage: usage, activity };
+  const [availabilityRequest] = await sql`select email, phone, country, consent_at, created_at from availability_requests where user_id = ${userId}`;
+  return { exportedAt: new Date().toISOString(), account: seeker ?? null, briefings, aiUsage: usage, activity, availabilityRequest: availabilityRequest ?? null };
 }
 
 export async function saveBriefing(b: Briefing): Promise<void> {
